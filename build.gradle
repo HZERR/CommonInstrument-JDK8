@@ -5,6 +5,7 @@ buildscript {
     }
 
     dependencies {
+        classpath "org.apache.commons:commons-lang3:3.12.0"
         classpath "commons-io:commons-io:2.8.0"
         classpath "org.javassist:javassist:3.27.0-GA"
     }
@@ -34,6 +35,7 @@ tasks.withType(JavaExec) {
 }
 
 dependencies {
+    implementation "org.apache.commons:commons-lang3:3.12.0"
     implementation "org.jetbrains:annotations:20.1.0"
     implementation "commons-io:commons-io:2.8.0"
     implementation "org.javassist:javassist:3.27.0-GA"
@@ -41,6 +43,6 @@ dependencies {
 
 shadowJar {
     archiveBaseName.set('common-instrument')
-    archiveVersion.set('1.0.0')
+    archiveVersion.set('1.0.1')
     archiveClassifier.set('all')
 }

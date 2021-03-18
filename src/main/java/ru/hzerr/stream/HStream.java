@@ -1,11 +1,8 @@
 package ru.hzerr.stream;
 
-import ru.hzerr.stream.function.Predicate;
-import ru.hzerr.stream.function.Consumer;
-import ru.hzerr.stream.function.Function;
-import ru.hzerr.stream.function.BiFunction;
-import ru.hzerr.stream.function.BinaryOperator;
-import ru.hzerr.stream.function.BiConsumer;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import ru.hzerr.stream.function.*;
 
 import java.util.*;
 import java.util.function.Supplier;
@@ -271,21 +268,26 @@ public class HStream<T> implements BaseHStream<T, HStream<T>>, Functions<T>, Clo
     @Override
     public boolean contentEquals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof HStream)) return false;
-        HStream<T> hStream = (HStream<T>) o;
-        T[] current = (T[]) this.value.get().toArray();
-        T[] target = (T[]) hStream.value.get().toArray();
-        this.value = () -> Stream.of(current);
-        hStream.value = () -> Stream.of(target);
-        return Arrays.equals(current, target);
+
+        if (o == null || getClass() != o.getClass()) return false;
+
+        HStream<?> hStream = (HStream<?>) o;
+
+        return new EqualsBuilder().append(value, hStream.value).isEquals();
     }
 
     @Override
-    @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
     public boolean equals(Object o) {
-        return contentEquals(o) &&
-                (isParallel() == ((HStream<T>) o).isParallel()) &&
-                catchFunc.equals(((HStream<T>) o).catchFunc);
+        if (this == o) return true;
+
+        if (o == null || getClass() != o.getClass()) return false;
+
+        HStream<?> hStream = (HStream<?>) o;
+
+        return new EqualsBuilder()
+                .append(value, hStream.value)
+                .append(isParallel(), ((HStream<?>) o).isParallel())
+                .append(catchFunc, hStream.catchFunc).isEquals();
     }
 
     /**
@@ -294,12 +296,15 @@ public class HStream<T> implements BaseHStream<T, HStream<T>>, Functions<T>, Clo
      * @return hash code of the instance
      */
     @Override
-    public int contentHashCode() {
-        return Arrays.hashCode(this.value.get().toArray());
-    }
+    public int contentHashCode() { return new HashCodeBuilder(17, 37).append(value).toHashCode(); }
 
     @Override
-    public int hashCode() { return contentHashCode() + Objects.hashCode(catchFunc) + Objects.hashCode(isParallel()); }
+    public int hashCode() {
+        return new HashCodeBuilder(17, 37)
+                .append(value)
+                .append(isParallel())
+                .append(catchFunc).toHashCode();
+    }
 
     public static <T> HStream<T> empty() {
         return new HStream<>();
