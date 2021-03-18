@@ -1,0 +1,46 @@
+buildscript {
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath "commons-io:commons-io:2.8.0"
+        classpath "org.javassist:javassist:3.27.0-GA"
+    }
+}
+
+plugins {
+    id 'java'
+    id 'idea'
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
+}
+
+group 'ru.hzerr'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs += "--enable-preview"
+}
+tasks.withType(Test) {
+    jvmArgs += "--enable-preview"
+}
+tasks.withType(JavaExec) {
+    jvmArgs += "--enable-preview"
+}
+
+dependencies {
+    implementation "org.jetbrains:annotations:20.1.0"
+    implementation "commons-io:commons-io:2.8.0"
+    implementation "org.javassist:javassist:3.27.0-GA"
+}
+
+shadowJar {
+    archiveBaseName.set('common-instrument')
+    archiveVersion.set('1.0.0')
+    archiveClassifier.set('all')
+}

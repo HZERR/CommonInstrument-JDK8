@@ -1,0 +1,8 @@
+.gradle
+.idea
+build/classes
+build/generated
+build/libs
+build/tmp
+src/test
+settings.gradle
