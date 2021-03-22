@@ -111,6 +111,12 @@ public class HFile {
         writeLines(lines, false);
     }
 
+    public long checksum() throws HFileReadException {
+        try {
+            return FileUtils.checksumCRC32(this.file);
+        } catch (IOException io) { throw new HFileReadException(io, "The checksum can't be received"); }
+    }
+
     /**
      * Writes the <code>toString()</code> value of each item in a collection to
      * the specified <code>File</code> line by line.
