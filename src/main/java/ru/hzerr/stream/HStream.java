@@ -286,7 +286,7 @@ public class HStream<T> implements BaseHStream<T, HStream<T>>, Functions<T>, Clo
 
         return new EqualsBuilder()
                 .append(value, hStream.value)
-                .append(isParallel(), ((HStream<?>) o).isParallel())
+                .append(isParallel(), hStream.isParallel())
                 .append(catchFunc, hStream.catchFunc).isEquals();
     }
 

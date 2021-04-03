@@ -1,45 +1,33 @@
 package ru.hzerr.file;
 
 import org.apache.commons.io.FileUtils;
-import ru.hzerr.file.exception.ValidationException;
-import ru.hzerr.file.exception.directory.HDirectoryNotFoundException;
+import ru.hzerr.file.exception.directory.NoSuchHDirectoryException;
 import ru.hzerr.file.exception.file.*;
 import ru.hzerr.stream.HStream;
 
-import java.io.*;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 
-public class HFile {
+public class HFile extends BaseFile {
 
-    File file;
+    public HFile(String pathname) { super(pathname); }
+    public HFile(String parent, String child) { super(parent, child); }
+    public HFile(BaseDirectory parent, String child) { super(parent, child); }
+    public HFile(URI uri) { super(uri); }
 
-    public HFile(String pathname) {
-        this.file = new File(pathname);
-        validate();
-    }
+    @Override
+    public String getName() { return this.file.getName(); }
 
-    public HFile(String parent, String child) {
-        this.file = new File(parent, child);
-        validate();
-    }
-
-    public HFile(HDirectory parent, String child) {
-        this.file = new File(parent.directory, child);
-        validate();
-    }
-
-    public HFile(URI uri) {
-        this.file = new File(uri);
-        validate();
-    }
-
-    public String getFileName() { return this.file.getName(); }
-
+    @Override
     public void create() throws HFileIsNotFileException, HFileCreationFailedException, HFileCreateImpossibleException {
         if (file.exists()) {
             if (file.isDirectory()) {
@@ -58,37 +46,62 @@ public class HFile {
                 }
             }
         }
-        validate();
     }
 
-    public void delete() throws IOException {
+    @Override
+    public boolean delete() throws IOException {
         checkExists(this);
         FileUtils.forceDelete(file);
+        return notExists();
     }
 
-    public void copyToFile(HFile file) throws IOException {
+    @Override
+    public <T extends BaseFile>
+    void copyToFile(T file) throws IOException {
         checkExists(file, this);
         FileUtils.copyFile(this.file, file.file);
     }
 
-    public void copyToDirectory(HDirectory directory) throws IOException {
+    @Override
+    public <T extends BaseDirectory>
+    void copyToDirectory(T directory) throws IOException {
         checkExists(directory, this);
         FileUtils.copyToDirectory(file, directory.directory);
     }
 
-    public void moveToFile(HFile file) throws IOException {
+    @Override
+    public <T extends BaseFile>
+    void moveToFile(T file) throws IOException {
         checkExists(file, this);
-        FileUtils.moveFile(this.file, file.file);
+        FileUtils.moveFile(this.file, ((HFile) file).file);
     }
 
-    public void moveToDirectory(HDirectory directory) throws IOException {
+    @Override
+    public <T extends BaseDirectory>
+    void moveToDirectory(T directory) throws IOException {
         checkExists(directory, this);
-        FileUtils.moveFileToDirectory(file, directory.directory, false);
+        FileUtils.moveFileToDirectory(file, ((HDirectory) directory).directory, false);
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
     public HDirectory getParent() { return new HDirectory(file.getAbsoluteFile().getParent()); }
 
+    @Override
+    public <T extends BaseDirectory> boolean isHierarchicalChild(T superParent) {
+        try {
+            return isHierarchicalChild0(superParent);
+        } catch (NullPointerException npe) { return false; }
+    }
+
+    @Override
+    public <T extends BaseDirectory> boolean notIsHierarchicalChild(T superParent) {
+        return !isHierarchicalChild(superParent);
+    }
+
+    @Override
     public boolean exists() { return file.exists(); }
+    @Override
     public boolean notExists() { return !file.exists(); }
 
     public byte[] readToByteArray() throws HFileReadException {
@@ -107,14 +120,11 @@ public class HFile {
         }
     }
 
+    @Override
+    void writeLines(String... lines) throws IOException { writeLines(List.of(lines)); }
+
     public void writeLines(Collection<String> lines) throws HFileWriteException {
         writeLines(lines, false);
-    }
-
-    public long checksum() throws HFileReadException {
-        try {
-            return FileUtils.checksumCRC32(this.file);
-        } catch (IOException io) { throw new HFileReadException(io, "The checksum can't be received"); }
     }
 
     /**
@@ -134,6 +144,12 @@ public class HFile {
         } catch (IOException io) {
             throw new HFileWriteException(io, "Writing to file " + toString() + " ended with an error");
         }
+    }
+
+    public long checksum() throws HFileReadException {
+        try {
+            return FileUtils.checksumCRC32(this.file);
+        } catch (IOException io) { throw new HFileReadException(io, "The checksum can't be received"); }
     }
 
     public InputStream openInputStream() throws HFileNotFoundException, HFileReadException {
@@ -159,32 +175,27 @@ public class HFile {
         return SizeType.BYTE.to(type, size).setScale(1, RoundingMode.DOWN).doubleValue();
     }
 
-    @Override
-    public String toString() { return file.getAbsolutePath(); }
-
-    private void validate() throws ValidationException {
-        if (file.isDirectory())
-            throw new ValidationException(file + " is a directory");
-    }
-
-    private void checkExists(HFile... files) throws HFileNotFoundException {
-        Objects.requireNonNull(files, "Files");
-        for (HFile file : files) {
-            if (file.notExists())
-                throw new HFileNotFoundException("File does not exist: " + file);
+    private boolean isHierarchicalChild0(BaseDirectory superParent) {
+        BaseDirectory superDirectory = getParent();
+        while (superDirectory != null) {
+            if (superDirectory.directory.equals(superParent.directory)) {
+                return true;
+            } else superDirectory = superDirectory.getParent();
         }
+
+        return false;
     }
 
-    private void checkExists(HDirectory... directories) throws HDirectoryNotFoundException {
-        Objects.requireNonNull(directories, "Directories");
-        for (HDirectory directory : directories) {
-            if (directory.notExists())
-                throw new HDirectoryNotFoundException("Directory does not exist: " + directory);
+    private void checkExists(IFSObject... objects) {
+        Objects.requireNonNull(objects, "Objects");
+        for (IFSObject object : objects) {
+            if (object.notExists()) {
+                if (object instanceof BaseFile that) {
+                    throw new NoSuchHFileException("File does not exist: " + that.file);
+                } else if (object instanceof BaseDirectory that) {
+                    throw new NoSuchHDirectoryException("Directory does not exist: " + that.directory);
+                } else throw new IllegalArgumentException("IFSObjects don't inherit BaseFile or BaseDirectory!");
+            }
         }
-    }
-
-    private void checkExists(HDirectory directory, HFile file) throws HFileNotFoundException, HDirectoryNotFoundException {
-        checkExists(directory);
-        checkExists(file);
     }
 }

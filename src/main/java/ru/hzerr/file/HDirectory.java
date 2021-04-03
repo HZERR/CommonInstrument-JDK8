@@ -4,10 +4,9 @@ import org.apache.commons.io.FileUtils;
 import ru.hzerr.collections.HCollectors;
 import ru.hzerr.collections.list.ArrayHList;
 import ru.hzerr.collections.list.HList;
-import ru.hzerr.file.exception.ValidationException;
 import ru.hzerr.file.exception.directory.HDirectoryCreateImpossibleException;
 import ru.hzerr.file.exception.directory.HDirectoryIsNotDirectoryException;
-import ru.hzerr.file.exception.directory.HDirectoryNotFoundException;
+import ru.hzerr.file.exception.directory.NoSuchHDirectoryException;
 import ru.hzerr.file.exception.file.HFileCreateImpossibleException;
 import ru.hzerr.file.exception.file.HFileCreationFailedException;
 import ru.hzerr.file.exception.file.HFileIsNotFileException;
@@ -24,30 +23,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 
-public class HDirectory {
+@SuppressWarnings("unchecked")
+public class HDirectory extends BaseDirectory {
 
-    File directory;
+    public HDirectory(URI uri) { super(uri); }
+    public HDirectory(String pathname) { super(pathname); }
+    public HDirectory(String parent, String child) { super(parent, child); }
+    public HDirectory(HDirectory parent, String child) { super(parent, child); }
 
-    public HDirectory(String pathname) {
-        this.directory = new File(pathname);
-        validate();
-    }
-
-    public HDirectory(String parent, String child) {
-        this.directory = new File(parent, child);
-        validate();
-    }
-
-    public HDirectory(URI uri) {
-        this.directory = new File(uri);
-        validate();
-    }
-
-    public HDirectory(HDirectory parent, String child) {
-        this.directory = new File(parent.directory, child);
-        validate();
-    }
-
+    @Override
     public void create() throws HDirectoryIsNotDirectoryException, HDirectoryCreateImpossibleException {
         if (directory.exists()) {
             if (directory.isFile()) {
@@ -62,23 +46,29 @@ public class HDirectory {
         }
     }
 
-    public String getDirectoryName() { return this.directory.getName(); }
+    @Override
+    public String getName() { return this.directory.getName(); }
 
+    @Override
     public HDirectory createSubDirectory(String dirName) throws HDirectoryIsNotDirectoryException, HDirectoryCreateImpossibleException {
         HDirectory subDirectory =  new HDirectory(this, dirName);
         subDirectory.create();
         return subDirectory;
     }
 
+    @Override
     public HFile createSubFile(String fileName) throws HFileIsNotFileException, HFileCreationFailedException, HFileCreateImpossibleException {
         HFile subFile = new HFile(this, fileName);
         subFile.create();
         return subFile;
     }
 
+    @Override
     public HDirectory getSubDirectory(String dirName) { return new HDirectory(this, dirName); }
+    @Override
     public HFile getSubFile(String fileName) { return new HFile(this, fileName); }
 
+    @Override
     public HStream<HFile> getFiles() {
         File[] files = this.directory.listFiles();
         if (files != null) {
@@ -92,6 +82,7 @@ public class HDirectory {
         } else return HStream.empty();
     }
 
+    @Override
     public HStream<HDirectory> getDirectories() {
         File[] files = this.directory.listFiles();
         if (files != null) {
@@ -105,6 +96,7 @@ public class HDirectory {
         } else return HStream.empty();
     }
 
+    @Override
     public DoubleHStream<HDirectory, HFile> getFiles(boolean recursive) throws IOException {
         if (recursive) {
             HList<FSObject> objects = walk().map(FSObject::new).collect(HCollectors.toHList());
@@ -118,72 +110,139 @@ public class HDirectory {
             }
             return DoubleHStreamBuilder.create(HDirectory.class, HFile.class)
                     .of(directories.toHStream(), files.toHStream());
-        } else {
-            HList<HDirectory> directories = new ArrayHList<>();
-            HList<HFile> files = new ArrayHList<>();
-            for (File object : directory.listFiles()) {
-                if (object.isDirectory()) {
-                    directories.add(new HDirectory(object.getAbsolutePath()));
-                } else {
-                    files.add(new HFile(object.getAbsolutePath()));
-                }
-            }
-            return DoubleHStreamBuilder.create(HDirectory.class, HFile.class)
-                    .of(directories.toHStream(), files.toHStream());
         }
+        HList<HDirectory> directories = new ArrayHList<>();
+        HList<HFile> files = new ArrayHList<>();
+        for (File object : directory.listFiles()) {
+            if (object.isDirectory()) {
+                directories.add(new HDirectory(object.getAbsolutePath()));
+            } else
+                files.add(new HFile(object.getAbsolutePath()));
+        }
+        return DoubleHStreamBuilder.create(HDirectory.class, HFile.class)
+                .of(directories.toHStream(), files.toHStream());
     }
 
+    @Override
     public boolean exists() { return this.directory.exists(); }
+    @Override
     public boolean notExists() { return !this.directory.exists(); }
-
+    @Override
     public HDirectory getParent() { return new HDirectory(directory.getAbsoluteFile().getParent()); }
 
-    public void cleanAll() throws IOException { FileUtils.cleanDirectory(directory); }
-    public void clean(String name) throws IOException { FileUtils.forceDelete(new File(directory, name)); }
-    public void delete() throws IOException { FileUtils.deleteDirectory(directory); }
+    @Override
+    public boolean clean() throws IOException {
+        FileUtils.cleanDirectory(directory);
+        return getFiles(true).count(Object.class) == 1;
+    }
 
-    public void copyToDirectory(HDirectory directory) throws IOException {
+    @Override
+    <T extends BaseDirectory> boolean deleteExcept(T... directories) throws IOException {
+        HStream<BaseDirectory> excludedFiles = HStream.of(directories);
+        DoubleHStream<HDirectory, HFile> filteredStream = this.getFiles(true);
+        if (filteredStream.count(Object.class) > 32) filteredStream.parallel(Object.class);
+        filteredStream.filter(HDirectory.class, dir -> !dir.directory.equals(directory))
+                .filter(HDirectory.class, directory -> excludedFiles.allMatch(directory::notIsHierarchicalChild))
+                .forEach(HDirectory.class, HDirectory::delete);
+        return filteredStream.allMatch(HDirectory.class, HDirectory::notExists);
+    }
+
+    @Override
+    <T extends BaseFile> boolean deleteExcept(T... files) throws IOException {
+        return deleteExcept(DoubleHStreamBuilder.create(BaseDirectory.class, BaseFile.class).of(HStream.empty(), HStream.of(files)));
+    }
+
+    @Override
+    public <ID extends BaseDirectory, IF extends BaseFile>
+    boolean deleteExcept(DoubleHStream<ID, IF> excludedFiles) throws IOException {
+        DoubleHStream<HDirectory, HFile> filteredStream = this.getFiles(true);
+        if (filteredStream.count(Object.class) > 32) filteredStream.parallel(Object.class);
+        filteredStream.filter(HDirectory.class, dir -> !dir.directory.equals(directory))
+                .filter(HFile.class, file -> excludedFiles.allMatch(HFile.class, internalFile -> !internalFile.equals(file)))
+                .filter(HDirectory.class, directory -> excludedFiles.allMatch(HDirectory.class, directory::notIsHierarchicalChild))
+                .filter(HFile.class, file -> excludedFiles.allMatch(HDirectory.class, file::notIsHierarchicalChild))
+                .forEach(HDirectory.class, HDirectory::delete)
+                .forEach(HFile.class, HFile::delete);
+        boolean dirDeleted = filteredStream.allMatch(HDirectory.class, HDirectory::notExists);
+        boolean fileDeleted = filteredStream.allMatch(HFile.class, HFile::notExists);
+        return dirDeleted && fileDeleted;
+    }
+
+    @Override
+    public boolean delete(String name) throws IOException {
+        File resource = new File(directory, name);
+        FileUtils.forceDelete(resource);
+        return !resource.exists();
+    }
+
+    @Override
+    public boolean delete() throws IOException {
+        checkExists(this);
+        FileUtils.deleteDirectory(directory);
+        return notExists();
+    }
+
+    @Override
+    public <T extends BaseDirectory> boolean isHierarchicalChild(T superParent) {
+        checkExists(this, superParent);
+        try {
+            return isHierarchicalChild0(superParent);
+        } catch (NullPointerException npe) { return false; }
+    }
+
+    @Override
+    public <T extends BaseDirectory> boolean notIsHierarchicalChild(T superParent) {
+        return !isHierarchicalChild(superParent);
+    }
+
+    @Override
+    public <T extends BaseDirectory> void copyToDirectory(T directory) throws IOException {
         checkExists(this, directory);
         FileUtils.copyDirectoryToDirectory(this.directory, directory.directory);
     }
 
-    public void copyContentToDirectory(HDirectory directory) throws IOException {
+    public <T extends BaseDirectory> void copyContentToDirectory(T directory) throws IOException {
         checkExists(this, directory);
         FileUtils.copyDirectory(this.directory, directory.directory);
     }
 
-    public void moveToDirectory(HDirectory directory) throws IOException {
+    public <T extends BaseDirectory> void moveToDirectory(T directory) throws IOException {
         checkExists(this, directory);
         FileUtils.moveDirectoryToDirectory(this.directory, directory.directory, false);
     }
 
-    public void moveContentToDirectory(HDirectory directory) throws IOException {
+    public <T extends BaseDirectory> void moveContentToDirectory(T directory) throws IOException {
         checkExists(this, directory);
         FileUtils.moveDirectory(this.directory, directory.directory);
     }
 
     public double sizeOf(SizeType type) {
+        checkExists(this);
         BigDecimal size = new BigDecimal(FileUtils.sizeOfDirectoryAsBigInteger(directory));
         return SizeType.BYTE.to(type, size).setScale(1, RoundingMode.DOWN).doubleValue();
     }
 
-    @Override
-    public String toString() { return directory.getAbsolutePath(); }
-
-    private void validate() throws ValidationException {
-        if (directory.isFile())
-            throw new ValidationException(directory + " is a file");
-    }
-
-    private void checkExists(HDirectory... directories) throws HDirectoryNotFoundException {
+    private void checkExists(BaseDirectory... directories) {
         Objects.requireNonNull(directories, "Directories");
-        for (HDirectory directory : directories) {
+        for (BaseDirectory directory : directories) {
             if (directory.notExists())
-                throw new HDirectoryNotFoundException("Directory does not exist: " + directory);
+                throw new NoSuchHDirectoryException("Directory does not exist: " + directory);
         }
     }
 
     private HStream<Path> walk() throws IOException {
         return HStream.of(Files.walk(directory.toPath()));
+    }
+
+    private boolean isHierarchicalChild0(BaseDirectory superParent) {
+        if (this.directory.equals(superParent.directory)) return true;
+        BaseDirectory supDirectory = getParent();
+        while (supDirectory != null) {
+            if (supDirectory.directory.equals(superParent.directory)) {
+                return true;
+            } else supDirectory = supDirectory.getParent();
+        }
+
+        return false;
     }
 }

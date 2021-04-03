@@ -32,7 +32,7 @@ public interface BaseHStream<T, S extends BaseHStream<T, S>> {
     S forEach(Consumer<? super T> action);
     S forEachOrdered(Consumer<? super T> action);
 
-    <R> BaseHStream map(Function<? super T, ? extends R> mapper);
+    <R> BaseHStream<R, ?> map(Function<? super T, ? extends R> mapper);
 
     boolean allMatch(Predicate<? super T> action);
     boolean anyMatch(Predicate<? super T> action);
