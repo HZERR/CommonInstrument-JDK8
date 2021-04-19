@@ -5,6 +5,7 @@ import java.io.IOException;
 public interface IFSObject {
 
     String getName();
+    String getLocation();
     void create() throws IOException;
     boolean exists();
     boolean notExists();

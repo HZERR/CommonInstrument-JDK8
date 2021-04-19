@@ -50,6 +50,9 @@ public class HDirectory extends BaseDirectory {
     public String getName() { return this.directory.getName(); }
 
     @Override
+    public String getLocation() { return this.directory.getAbsolutePath(); }
+
+    @Override
     public HDirectory createSubDirectory(String dirName) throws HDirectoryIsNotDirectoryException, HDirectoryCreateImpossibleException {
         HDirectory subDirectory =  new HDirectory(this, dirName);
         subDirectory.create();
@@ -137,7 +140,7 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
-    <T extends BaseDirectory> boolean deleteExcept(T... directories) throws IOException {
+    public <T extends BaseDirectory> boolean deleteExcept(T... directories) throws IOException {
         HStream<BaseDirectory> excludedFiles = HStream.of(directories);
         DoubleHStream<HDirectory, HFile> filteredStream = this.getFiles(true);
         if (filteredStream.count(Object.class) > 32) filteredStream.parallel(Object.class);
@@ -148,7 +151,7 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
-    <T extends BaseFile> boolean deleteExcept(T... files) throws IOException {
+    public <T extends BaseFile> boolean deleteExcept(T... files) throws IOException {
         return deleteExcept(DoubleHStreamBuilder.create(BaseDirectory.class, BaseFile.class).of(HStream.empty(), HStream.of(files)));
     }
 

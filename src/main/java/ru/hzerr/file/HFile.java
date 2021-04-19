@@ -28,6 +28,9 @@ public class HFile extends BaseFile {
     public String getName() { return this.file.getName(); }
 
     @Override
+    public String getLocation() { return this.file.getAbsolutePath(); }
+
+    @Override
     public void create() throws HFileIsNotFileException, HFileCreationFailedException, HFileCreateImpossibleException {
         if (file.exists()) {
             if (file.isDirectory()) {
@@ -121,7 +124,7 @@ public class HFile extends BaseFile {
     }
 
     @Override
-    void writeLines(String... lines) throws IOException { writeLines(List.of(lines)); }
+    public void writeLines(String... lines) throws IOException { writeLines(List.of(lines)); }
 
     public void writeLines(Collection<String> lines) throws HFileWriteException {
         writeLines(lines, false);

@@ -43,6 +43,6 @@ dependencies {
 
 shadowJar {
     archiveBaseName.set('common-instrument')
-    archiveVersion.set('1.0.5')
+    archiveVersion.set('1.0.6.1')
     archiveClassifier.set('all')
 }
