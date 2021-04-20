@@ -150,9 +150,10 @@ public class HDirectory extends BaseDirectory {
         return filteredStream.allMatch(HDirectory.class, HDirectory::notExists);
     }
 
+    // ТУТ БАГ!!!
     @Override
     public <T extends BaseFile> boolean deleteExcept(T... files) throws IOException {
-        return deleteExcept(DoubleHStreamBuilder.create(BaseDirectory.class, BaseFile.class).of(HStream.empty(), HStream.of(files)));
+        return deleteExcept(DoubleHStreamBuilder.create(HDirectory.class, HFile.class).of(HStream.empty(), HStream.of((HFile[]) files)));
     }
 
     @Override

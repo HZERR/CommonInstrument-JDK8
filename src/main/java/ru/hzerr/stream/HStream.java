@@ -273,7 +273,7 @@ public class HStream<T> implements BaseHStream<T, HStream<T>>, Functions<T>, Clo
 
         HStream<?> hStream = (HStream<?>) o;
 
-        return new EqualsBuilder().append(value, hStream.value).isEquals();
+        return new EqualsBuilder().append(value.get().toArray(), hStream.value.get().toArray()).isEquals();
     }
 
     @Override
@@ -283,9 +283,8 @@ public class HStream<T> implements BaseHStream<T, HStream<T>>, Functions<T>, Clo
         if (o == null || getClass() != o.getClass()) return false;
 
         HStream<?> hStream = (HStream<?>) o;
-
         return new EqualsBuilder()
-                .append(value, hStream.value)
+                .append(value.get().toArray(), hStream.value.get().toArray())
                 .append(isParallel(), hStream.isParallel())
                 .append(catchFunc, hStream.catchFunc).isEquals();
     }
@@ -296,12 +295,12 @@ public class HStream<T> implements BaseHStream<T, HStream<T>>, Functions<T>, Clo
      * @return hash code of the instance
      */
     @Override
-    public int contentHashCode() { return new HashCodeBuilder(17, 37).append(value).toHashCode(); }
+    public int contentHashCode() { return new HashCodeBuilder(17, 37).append(value.get().toArray()).toHashCode(); }
 
     @Override
     public int hashCode() {
         return new HashCodeBuilder(17, 37)
-                .append(value)
+                .append(value.get().toArray())
                 .append(isParallel())
                 .append(catchFunc).toHashCode();
     }
@@ -316,7 +315,7 @@ public class HStream<T> implements BaseHStream<T, HStream<T>>, Functions<T>, Clo
         return new HStream<>(value);
     }
     public static <T> HStream<T> of(List<T> list) {
-        return new HStream<>((T) list.toArray());
+        return new HStream<>((T[]) list.toArray());
     }
     public static <T> HStream<T> of(Enumeration<T> enumeration) {
         if (enumeration == null || !enumeration.hasMoreElements()) return HStream.empty();
