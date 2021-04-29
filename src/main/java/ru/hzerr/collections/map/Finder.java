@@ -6,4 +6,5 @@ public interface Finder<K, V> {
 
     K findKey(Predicate<K> predicate);
     V findValue(Predicate<V> predicate);
+    V findValueByKey(Predicate<K> predicate);
 }

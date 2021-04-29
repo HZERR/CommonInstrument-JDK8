@@ -40,6 +40,16 @@ public class HashHMap<K, V> extends HashMap<K, V> implements HMap<K, V> {
     }
 
     @Override
+    public V findValueByKey(Predicate<K> predicate) {
+        for (K k: this.keySet()) {
+            if (predicate.test(k)) {
+                return this.get(k);
+            }
+        }
+        return null;
+    }
+
+    @Override
     public boolean containsKey(@NotNull Predicate<K> predicate) {
         for (K k: keySet()) {
             if (predicate.test(k)) {
