@@ -2,6 +2,8 @@ package ru.hzerr.bytecode;
 
 import javassist.CtClass;
 import javassist.CtMethod;
+import ru.hzerr.collections.list.ArrayHList;
+import ru.hzerr.collections.list.HList;
 import ru.hzerr.stream.HStream;
 import ru.hzerr.stream.function.Predicate;
 
@@ -40,13 +42,13 @@ public class MethodByteCodeBuilder extends ByteCodeBuilder {
     }
 
     public MethodByteCodeBuilder filterByParameters(String... classes) {
-        methods.filter(method -> HStream.of(classes).allMatch(clazz -> method.getLongName().contains(clazz)));
-//        HStream<CtClass> ctClassHStream = HStream.of(classes).map(
-//                clazz -> Runtime.call(() ->
-//                        ByteCodeBuilderFactory.getDefaultClassPoolSettings().getCtClass(clazz)));
-//        methods.filter(method ->
-//                ctClassHStream.allMatch(ctClass ->
-//                        Arrays.asList(Runtime.call(method::getParameterTypes)).contains(ctClass)));
+//        methods.filter(method -> HStream.of(classes).allMatch(clazz -> method.getLongName().contains(clazz)));
+        HStream<CtClass> ctClassHStream = HStream.of(classes).map(
+                clazz -> Runtime.call(() ->
+                        ByteCodeBuilderFactory.getDefaultClassPoolSettings().getCtClass(clazz)));
+        methods.filter(method ->
+                ctClassHStream.allMatch(ctClass ->
+                        ArrayHList.create(Runtime.call(method::getParameterTypes)).contains(innerParameter -> innerParameter.getName().equals(ctClass.getName()))));
         return this;
     }
 

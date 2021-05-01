@@ -2,6 +2,7 @@ package ru.hzerr.bytecode;
 
 import javassist.CtClass;
 import javassist.CtConstructor;
+import ru.hzerr.collections.list.ArrayHList;
 import ru.hzerr.stream.HStream;
 import ru.hzerr.stream.function.Predicate;
 
@@ -39,7 +40,7 @@ public class ConstructorByteCodeBuilder extends ByteCodeBuilder {
                         ByteCodeBuilderFactory.getDefaultClassPoolSettings().getCtClass(clazz)));
         constructors.filter(constructor ->
                 ctClassHStream.allMatch(ctClass ->
-                        Arrays.asList(Runtime.call(constructor::getParameterTypes)).contains(ctClass)));
+                        ArrayHList.create(Runtime.call(constructor::getParameterTypes)).contains(innerParameter -> innerParameter.getName().equals(ctClass.getName()))));
         return this;
     }
 
