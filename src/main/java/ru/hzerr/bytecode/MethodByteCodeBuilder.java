@@ -40,12 +40,13 @@ public class MethodByteCodeBuilder extends ByteCodeBuilder {
     }
 
     public MethodByteCodeBuilder filterByParameters(String... classes) {
-        HStream<CtClass> ctClassHStream = HStream.of(classes).map(
-                clazz -> Runtime.call(() ->
-                        ByteCodeBuilderFactory.getDefaultClassPoolSettings().getCtClass(clazz)));
-        methods.filter(method ->
-                ctClassHStream.allMatch(ctClass ->
-                        Arrays.asList(Runtime.call(method::getParameterTypes)).contains(ctClass)));
+        methods.filter(method -> HStream.of(classes).allMatch(clazz -> method.getLongName().contains(clazz)));
+//        HStream<CtClass> ctClassHStream = HStream.of(classes).map(
+//                clazz -> Runtime.call(() ->
+//                        ByteCodeBuilderFactory.getDefaultClassPoolSettings().getCtClass(clazz)));
+//        methods.filter(method ->
+//                ctClassHStream.allMatch(ctClass ->
+//                        Arrays.asList(Runtime.call(method::getParameterTypes)).contains(ctClass)));
         return this;
     }
 
