@@ -10,6 +10,7 @@ import java.util.stream.Collector;
 import java.util.stream.Stream;
 
 /**
+ * Extended version of the {@link ru.hzerr.stream.standard.StandardHStream} class.
  * @author HZERR
  * @see Stream
  */
