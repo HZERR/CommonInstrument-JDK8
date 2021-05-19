@@ -10,6 +10,7 @@ import ru.hzerr.file.exception.directory.NoSuchHDirectoryException;
 import ru.hzerr.file.exception.file.HFileCreateImpossibleException;
 import ru.hzerr.file.exception.file.HFileCreationFailedException;
 import ru.hzerr.file.exception.file.HFileIsNotFileException;
+import ru.hzerr.file.exception.file.NoSuchHFileException;
 import ru.hzerr.stream.HStream;
 import ru.hzerr.stream.bi.DoubleHStream;
 import ru.hzerr.stream.bi.DoubleHStreamBuilder;
@@ -21,6 +22,7 @@ import java.math.RoundingMode;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 
 @SuppressWarnings("unchecked")
@@ -61,18 +63,27 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     public HFile createSubFile(String fileName) throws HFileIsNotFileException, HFileCreationFailedException, HFileCreateImpossibleException {
+        checkExists(this);
         HFile subFile = new HFile(this, fileName);
         subFile.create();
         return subFile;
     }
 
     @Override
-    public HDirectory getSubDirectory(String dirName) { return new HDirectory(this, dirName); }
+    public HDirectory getSubDirectory(String dirName) {
+        checkExists(this);
+        return new HDirectory(this, dirName);
+    }
+
     @Override
-    public HFile getSubFile(String fileName) { return new HFile(this, fileName); }
+    public HFile getSubFile(String fileName) {
+        checkExists(this);
+        return new HFile(this, fileName);
+    }
 
     @Override
     public HStream<HFile> getFiles() {
+        checkExists(this);
         File[] files = this.directory.listFiles();
         if (files != null) {
             HList<HFile> subFiles = new ArrayHList<>();
@@ -87,6 +98,7 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     public HStream<HDirectory> getDirectories() {
+        checkExists(this);
         File[] files = this.directory.listFiles();
         if (files != null) {
             HList<HDirectory> subDirectories = new ArrayHList<>();
@@ -101,6 +113,7 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     public DoubleHStream<HDirectory, HFile> getFiles(boolean recursive) throws IOException {
+        checkExists(this);
         if (recursive) {
             HList<FSObject> objects = walk().map(FSObject::new).collect(HCollectors.toHList());
             HList<HDirectory> directories = new ArrayHList<>();
@@ -116,11 +129,14 @@ public class HDirectory extends BaseDirectory {
         }
         HList<HDirectory> directories = new ArrayHList<>();
         HList<HFile> files = new ArrayHList<>();
-        for (File object : directory.listFiles()) {
-            if (object.isDirectory()) {
-                directories.add(new HDirectory(object.getAbsolutePath()));
-            } else
-                files.add(new HFile(object.getAbsolutePath()));
+        File[] objects = directory.listFiles();
+        if (objects != null) {
+            for (File object : objects) {
+                if (object.isDirectory()) {
+                    directories.add(new HDirectory(object.getAbsolutePath()));
+                } else
+                    files.add(new HFile(object.getAbsolutePath()));
+            }
         }
         return DoubleHStreamBuilder.create(HDirectory.class, HFile.class)
                 .of(directories.toHStream(), files.toHStream());
@@ -135,12 +151,15 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     public boolean clean() throws IOException {
+        checkExists(this);
         FileUtils.cleanDirectory(directory);
         return getFiles(true).count(Object.class) == 1;
     }
 
     @Override
     public <T extends BaseDirectory> boolean deleteExcept(T... directories) throws IOException {
+        checkExists(this);
+        checkExists(directories);
         HStream<BaseDirectory> excludedFiles = HStream.of(directories);
         DoubleHStream<HDirectory, HFile> filteredStream = this.getFiles(true);
         if (filteredStream.count(Object.class) > 32) filteredStream.parallel(Object.class);
@@ -158,6 +177,7 @@ public class HDirectory extends BaseDirectory {
     @Override
     public <ID extends BaseDirectory, IF extends BaseFile>
     boolean deleteExcept(DoubleHStream<ID, IF> excludedFiles) throws IOException {
+        checkExists(this);
         DoubleHStream<HDirectory, HFile> filteredStream = this.getFiles(true);
         if (filteredStream.count(Object.class) > 32) filteredStream.parallel(Object.class);
         filteredStream.filter(HDirectory.class, dir -> !dir.directory.equals(directory))
@@ -173,7 +193,9 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     public boolean delete(String name) throws IOException {
+        checkExists(this);
         File resource = new File(directory, name);
+        if (!resource.exists()) throw new NoSuchHFileException("File " + resource + " not found");
         FileUtils.forceDelete(resource);
         return !resource.exists();
     }

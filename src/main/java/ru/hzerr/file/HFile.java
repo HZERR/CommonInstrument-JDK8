@@ -76,22 +76,26 @@ public class HFile extends BaseFile {
     public <T extends BaseFile>
     void moveToFile(T file) throws IOException {
         checkExists(file, this);
-        FileUtils.moveFile(this.file, ((HFile) file).file);
+        FileUtils.moveFile(this.file, file.file);
     }
 
     @Override
     public <T extends BaseDirectory>
     void moveToDirectory(T directory) throws IOException {
         checkExists(directory, this);
-        FileUtils.moveFileToDirectory(file, ((HDirectory) directory).directory, false);
+        FileUtils.moveFileToDirectory(file, directory.directory, false);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public HDirectory getParent() { return new HDirectory(file.getAbsoluteFile().getParent()); }
+    public HDirectory getParent() {
+        checkExists(this);
+        return new HDirectory(file.getAbsoluteFile().getParent());
+    }
 
     @Override
     public <T extends BaseDirectory> boolean isHierarchicalChild(T superParent) {
+        checkExists(this, superParent);
         try {
             return isHierarchicalChild0(superParent);
         } catch (NullPointerException npe) { return false; }
@@ -108,27 +112,27 @@ public class HFile extends BaseFile {
     public boolean notExists() { return !file.exists(); }
 
     public byte[] readToByteArray() throws HFileReadException {
+        checkExists(this);
         try {
             return FileUtils.readFileToByteArray(file);
         } catch (IOException io) {
-            throw new HFileReadException(io, "The reading of file " + toString() + " ended with an error");
+            throw new HFileReadException(io, "The reading of file " + this.getLocation() + " ended with an error");
         }
     }
 
     public HStream<String> readLines(Charset charset) throws HFileReadException {
+        checkExists(this);
         try {
             return HStream.of(FileUtils.readLines(file, charset));
         } catch (IOException io) {
-            throw new HFileReadException(io, "The reading of file " + toString() + " ended with an error");
+            throw new HFileReadException(io, "The reading of file " + this.getLocation() + " ended with an error");
         }
     }
 
     @Override
     public void writeLines(String... lines) throws IOException { writeLines(List.of(lines)); }
 
-    public void writeLines(Collection<String> lines) throws HFileWriteException {
-        writeLines(lines, false);
-    }
+    public void writeLines(Collection<String> lines) throws HFileWriteException { writeLines(lines, false); }
 
     /**
      * Writes the <code>toString()</code> value of each item in a collection to
@@ -142,14 +146,16 @@ public class HFile extends BaseFile {
      * @since 2.1
      */
     public void writeLines(Collection<String> lines, boolean append) throws HFileWriteException {
+        checkExists(this);
         try {
             FileUtils.writeLines(file, lines, append);
         } catch (IOException io) {
-            throw new HFileWriteException(io, "Writing to file " + toString() + " ended with an error");
+            throw new HFileWriteException(io, "Writing to file " + this.getLocation() + " ended with an error");
         }
     }
 
     public long checksum() throws HFileReadException {
+        checkExists(this);
         try {
             return FileUtils.checksumCRC32(this.file);
         } catch (IOException io) { throw new HFileReadException(io, "The checksum can't be received"); }
@@ -161,11 +167,12 @@ public class HFile extends BaseFile {
         } catch (FileNotFoundException fnf) {
             throw new HFileNotFoundException("File does not exist: " + file);
         } catch (IOException io) {
-            throw new HFileReadException(io, "The reading of file " + toString() + " ended with an error");
+            throw new HFileReadException(io, "The reading of file " + this.getLocation() + " ended with an error");
         }
     }
 
     public OutputStream openOutputStream() throws IOException {
+        checkExists(this);
         return openOutputStream(false);
     }
 
@@ -174,6 +181,7 @@ public class HFile extends BaseFile {
     }
 
     public double sizeOf(SizeType type) {
+        checkExists(this);
         BigDecimal size = new BigDecimal(FileUtils.sizeOfAsBigInteger(file));
         return SizeType.BYTE.to(type, size).setScale(1, RoundingMode.DOWN).doubleValue();
     }
