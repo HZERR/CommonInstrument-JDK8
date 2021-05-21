@@ -1,14 +1,12 @@
 package ru.hzerr.file;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import ru.hzerr.file.exception.directory.NoSuchHDirectoryException;
 import ru.hzerr.file.exception.file.*;
 import ru.hzerr.stream.HStream;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URI;
@@ -56,6 +54,21 @@ public class HFile extends BaseFile {
         checkExists(this);
         FileUtils.forceDelete(file);
         return notExists();
+    }
+
+    @Override
+    public void rename(String fullName) throws HFileRenameFailedException {
+        checkExists(this);
+        File dest = new File(getParent().getLocation().concat(fullName));
+        if (dest.exists()) throw new HFileRenameFailedException("File " + dest.getAbsolutePath() + " is already exists");
+        if (!file.renameTo(dest)) {
+            throw new HFileRenameFailedException("File " + this.getLocation() + " has not been renamed");
+        }
+    }
+
+    @Override
+    public void rename(String name, String extension) throws HFileRenameFailedException {
+        this.rename(name + extension);
     }
 
     @Override

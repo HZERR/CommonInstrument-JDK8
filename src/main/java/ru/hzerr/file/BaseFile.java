@@ -3,6 +3,7 @@ package ru.hzerr.file;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import ru.hzerr.file.exception.ValidationException;
+import ru.hzerr.file.exception.file.HFileRenameFailedException;
 import ru.hzerr.stream.BaseHStream;
 
 import java.io.File;
@@ -39,6 +40,8 @@ public abstract class BaseFile implements IFSObject {
 
     // METHODS
 
+    public abstract void rename(String fullName) throws HFileRenameFailedException;
+    public abstract void rename(String name, String extension) throws HFileRenameFailedException;
     public abstract <T extends BaseFile> void copyToFile(T file) throws IOException;
     public abstract <T extends BaseDirectory> void copyToDirectory(T directory) throws IOException;
     public abstract <T extends BaseFile> void moveToFile(T file) throws IOException;
