@@ -70,16 +70,10 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
-    public HDirectory getSubDirectory(String dirName) {
-        checkExists(this);
-        return new HDirectory(this, dirName);
-    }
+    public HDirectory getSubDirectory(String dirName) { return new HDirectory(this, dirName); }
 
     @Override
-    public HFile getSubFile(String fileName) {
-        checkExists(this);
-        return new HFile(this, fileName);
-    }
+    public HFile getSubFile(String fileName) { return new HFile(this, fileName); }
 
     @Override
     public HStream<HFile> getFiles() {
