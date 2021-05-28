@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
+@SuppressWarnings({"unused", "unchecked"})
 public abstract class BaseDirectory implements IFSObject {
 
     protected File directory;
@@ -46,6 +47,10 @@ public abstract class BaseDirectory implements IFSObject {
     public abstract <ID extends BaseDirectory, IF extends BaseFile>
     DoubleHStream<ID, IF> getFiles(boolean recursive) throws IOException;
 
+    public abstract boolean isEmpty();
+    public abstract boolean isNotEmpty();
+    public abstract boolean isNotFoundInternalDirectories() throws IOException;
+    public abstract boolean isNotFoundInternalFiles() throws IOException;
     public abstract boolean clean() throws IOException;
 
     public abstract <T extends BaseDirectory> boolean deleteExcept(T... directories) throws IOException;

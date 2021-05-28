@@ -137,6 +137,22 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
+    public boolean isEmpty() { return directory.list().length == 0; }
+
+    @Override
+    public boolean isNotEmpty() { return directory.list().length != 0; }
+
+    @Override
+    public boolean isNotFoundInternalDirectories() throws IOException {
+        return this.getFiles(false).count(HDirectory.class) == 0;
+    }
+
+    @Override
+    public boolean isNotFoundInternalFiles() throws IOException {
+        return this.getFiles(false).count(HFile.class) == 0;
+    }
+
+    @Override
     public boolean exists() { return this.directory.exists(); }
     @Override
     public boolean notExists() { return !this.directory.exists(); }
