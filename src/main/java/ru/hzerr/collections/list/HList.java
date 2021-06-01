@@ -5,6 +5,7 @@ import ru.hzerr.stream.HStream;
 import java.util.List;
 
 public interface HList<E> extends List<E>,
+        Finder<E>,
         Contender<E>,
         Streamable<E> {
 

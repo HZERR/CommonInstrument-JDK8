@@ -181,7 +181,7 @@ public class StandardHStream<T> implements StandardBaseHStream<T, StandardHStrea
         T[] target = (T[]) hStream.value.get().toArray();
         this.value = () -> Stream.of(current);
         hStream.value = () -> Stream.of(target);
-        boolean parallelIdentity = ((StandardHStream<?>) o).isParallel() == isParallel();
+        boolean parallelIdentity = hStream.isParallel() == isParallel();
         return Arrays.equals(current, target) && parallelIdentity;
     }
 

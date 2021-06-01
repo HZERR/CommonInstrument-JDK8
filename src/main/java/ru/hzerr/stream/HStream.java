@@ -277,6 +277,35 @@ public class HStream<T> implements BaseHStream<T, HStream<T>>, Functions<T>, Clo
         return new EqualsBuilder().append(value.get().toArray(), hStream.value.get().toArray()).isEquals();
     }
 
+    /**
+     * <pre>
+     *     Example with return true
+     *     {@code
+     *     HStream<Integer> stream = HStream.of(1);
+     *     HStream<Integer> stream2 = HStream.of(1);
+     *     Consumer<Exception> wrapper = Throwable::printStackTrace;
+     *     stream.wrap(wrapper);
+     *     stream2.wrap(wrapper);
+     *     System.out.println(stream.equals(stream2)); // return true
+     *     }
+     *     Example with return false
+     *     {@code
+     *     HStream<Integer> stream = HStream.of(1);
+     *     HStream<Integer> stream2 = HStream.of(1);
+     *     stream.wrap(Throwable::printStackTrace);
+     *     stream2.wrap(Throwable::printStackTrace);
+     *     System.out.println(stream.equals(stream2)); // return false
+     *
+     *     HStream<Integer> stream = HStream.of(1);
+     *     HStream<Integer> stream2 = HStream.of(1);
+     *     Consumer<Exception> wrapper = Throwable::printStackTrace;
+     *     Consumer<Exception> wrapper2 = Throwable::printStackTrace;
+     *     stream.wrap(wrapper);
+     *     stream2.wrap(wrapper2);
+     *     System.out.println(stream.equals(stream2)); // return false
+     *     }
+     * </pre>
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

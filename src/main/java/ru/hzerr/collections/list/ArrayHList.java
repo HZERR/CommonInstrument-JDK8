@@ -1,6 +1,7 @@
 package ru.hzerr.collections.list;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import ru.hzerr.stream.HStream;
 
 import java.util.ArrayList;
@@ -25,6 +26,26 @@ public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
         }
 
         return list;
+    }
+
+
+    @Override
+    public @Nullable E find(Predicate<E> predicate) {
+        for (E element: this) {
+            if (predicate.test(element)) return element;
+        }
+
+        return null;
+    }
+
+    @Override
+    public HList<E> findAll(Predicate<E> predicate) {
+        HList<E> values = new ArrayHList<>();
+        for (E element: this) {
+            if (predicate.test(element)) values.add(element);
+        }
+
+        return values;
     }
 
     @Override
