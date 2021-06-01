@@ -7,6 +7,7 @@ import ru.hzerr.stream.HStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -30,12 +31,12 @@ public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
 
 
     @Override
-    public @Nullable E find(Predicate<E> predicate) {
+    public Optional<E> find(Predicate<E> predicate) {
         for (E element: this) {
-            if (predicate.test(element)) return element;
+            if (predicate.test(element)) return Optional.of(element);
         }
 
-        return null;
+        return Optional.empty();
     }
 
     @Override
