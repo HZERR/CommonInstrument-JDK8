@@ -3,6 +3,11 @@ package ru.hzerr.file;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import ru.hzerr.file.exception.ValidationException;
+import ru.hzerr.file.exception.directory.HDirectoryCreateImpossibleException;
+import ru.hzerr.file.exception.directory.HDirectoryIsNotDirectoryException;
+import ru.hzerr.file.exception.file.HFileCreateImpossibleException;
+import ru.hzerr.file.exception.file.HFileCreationFailedException;
+import ru.hzerr.file.exception.file.HFileIsNotFileException;
 import ru.hzerr.stream.HStream;
 import ru.hzerr.stream.bi.DoubleHStream;
 
@@ -41,6 +46,8 @@ public abstract class BaseDirectory implements IFSObject {
     public abstract <T extends BaseFile> T createSubFile(String fileName) throws IOException;
     public abstract <T extends BaseDirectory> T getSubDirectory(String dirName);
     public abstract <T extends BaseFile> T getSubFile(String fileName);
+    public abstract <T extends IFSObject> T getSubFSObject(String name);
+    public abstract <T extends IFSObject> T createSubFSObject(String name) throws HDirectoryCreateImpossibleException, HDirectoryIsNotDirectoryException, HFileCreationFailedException, HFileCreateImpossibleException, HFileIsNotFileException;
 
     public abstract <T extends BaseFile> HStream<T> getFiles();
     public abstract <T extends BaseDirectory> HStream<T> getDirectories();

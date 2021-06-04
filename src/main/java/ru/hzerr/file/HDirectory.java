@@ -76,6 +76,23 @@ public class HDirectory extends BaseDirectory {
     public HFile getSubFile(String fileName) { return new HFile(this, fileName); }
 
     @Override
+    public IFSObject getSubFSObject(String name) {
+        final File innerFile = new File(directory, name);
+        if (innerFile.isDirectory()) return new HDirectory(innerFile.getAbsolutePath());
+        else return new HFile(innerFile.getAbsolutePath());
+    }
+
+    @Override
+    public IFSObject createSubFSObject(String name) throws HDirectoryCreateImpossibleException, HDirectoryIsNotDirectoryException, HFileCreationFailedException, HFileCreateImpossibleException, HFileIsNotFileException {
+        checkExists(this);
+        if (new File(directory, name).isDirectory()) {
+            return this.createSubDirectory(name);
+        }
+        else
+            return this.createSubFile(name);
+    }
+
+    @Override
     public HStream<HFile> getFiles() {
         checkExists(this);
         File[] files = this.directory.listFiles();
