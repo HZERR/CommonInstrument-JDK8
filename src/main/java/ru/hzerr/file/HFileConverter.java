@@ -6,6 +6,7 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.file.Path;
 
+@Deprecated
 public class HFileConverter {
 
     private HFileConverter() {}

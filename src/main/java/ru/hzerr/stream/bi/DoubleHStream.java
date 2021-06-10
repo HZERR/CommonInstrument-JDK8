@@ -9,6 +9,8 @@ import java.util.Comparator;
 import java.util.Optional;
 import java.util.Random;
 
+@SuppressWarnings({"unchecked", "unused"})
+@Deprecated
 public class DoubleHStream<T1, T2> implements DoubleBaseHStream<T1, T2, DoubleHStream<T1, T2>> {
 
     private final HStream<T1> stream;
@@ -365,6 +367,7 @@ public class DoubleHStream<T1, T2> implements DoubleBaseHStream<T1, T2, DoubleHS
     }
 
     private IllegalArgumentException illegalArgumentException(String arg) {
+        //noinspection StringBufferReplaceableByString
         StringBuilder message = new StringBuilder();
         message.append("The passed ").append(arg).append(" cannot be applied to internal HStream classes,");
         message.append(" because their generic parameters do not match");

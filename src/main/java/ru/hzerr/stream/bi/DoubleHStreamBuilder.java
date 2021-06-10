@@ -2,6 +2,7 @@ package ru.hzerr.stream.bi;
 
 import ru.hzerr.stream.HStream;
 
+@Deprecated
 public class DoubleHStreamBuilder<T1, T2> {
 
     private Class<T1> t1;

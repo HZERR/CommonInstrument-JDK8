@@ -2,7 +2,7 @@ package ru.hzerr.file;
 
 import java.io.IOException;
 
-public interface IFSObject {
+public interface IFSObject extends BackwardCompatibility, IObject {
 
     String getName();
     String getLocation();

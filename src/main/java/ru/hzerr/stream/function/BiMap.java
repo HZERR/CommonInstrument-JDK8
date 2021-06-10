@@ -12,6 +12,6 @@ public interface BiMap<T> {
      * @return new HStream<R>
      */
     <R> BaseHStream biMap(Predicate<? super T> condition,
-                             Function<? super T, ? extends R> actionForElementsYes,
-                             Function<? super T, ? extends R> actionForElementsNo);
+                          Function<? super T, ? extends R> actionForElementsYes,
+                          Function<? super T, ? extends R> actionForElementsNo);
 }

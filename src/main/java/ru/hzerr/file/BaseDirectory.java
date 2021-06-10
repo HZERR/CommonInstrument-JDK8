@@ -3,13 +3,8 @@ package ru.hzerr.file;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import ru.hzerr.file.exception.ValidationException;
-import ru.hzerr.file.exception.directory.HDirectoryCreateImpossibleException;
-import ru.hzerr.file.exception.directory.HDirectoryIsNotDirectoryException;
-import ru.hzerr.file.exception.file.HFileCreateImpossibleException;
-import ru.hzerr.file.exception.file.HFileCreationFailedException;
-import ru.hzerr.file.exception.file.HFileIsNotFileException;
 import ru.hzerr.stream.HStream;
-import ru.hzerr.stream.bi.DoubleHStream;
+import ru.hzerr.file.stream.FileStream;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,25 +41,29 @@ public abstract class BaseDirectory implements IFSObject {
     public abstract <T extends BaseFile> T createSubFile(String fileName) throws IOException;
     public abstract <T extends BaseDirectory> T getSubDirectory(String dirName);
     public abstract <T extends BaseFile> T getSubFile(String fileName);
-    public abstract <T extends IFSObject> T getSubFSObject(String name);
-    public abstract <T extends IFSObject> T createSubFSObject(String name) throws HDirectoryCreateImpossibleException, HDirectoryIsNotDirectoryException, HFileCreationFailedException, HFileCreateImpossibleException, HFileIsNotFileException;
 
-    public abstract <T extends BaseFile> HStream<T> getFiles();
-    public abstract <T extends BaseDirectory> HStream<T> getDirectories();
-    public abstract <ID extends BaseDirectory, IF extends BaseFile>
-    DoubleHStream<ID, IF> getFiles(boolean recursive) throws IOException;
+    public abstract <T extends BaseFile> HStream<T> getFiles() throws IOException;
+    public abstract <T extends BaseDirectory> HStream<T> getDirectories() throws IOException;
+    public abstract FileStream getFiles(boolean recursive) throws IOException;
+    public abstract <T extends BaseFile> HStream<T> getFilesExcept(T... filesToBeExcluded) throws IOException;
+    public abstract <T extends BaseFile> HStream<T> getFilesExcept(String... filesToBeExcluded) throws IOException;
+    public abstract <T extends BaseDirectory> HStream<T> getDirectoriesExcept(T... filesToBeExcluded) throws IOException;
+    public abstract <T extends BaseDirectory> HStream<T> getDirectoriesExcept(String... filesToBeExcluded) throws IOException;
+    public abstract FileStream getFilesExcept(FileStream filesToBeExcluded, boolean recursive) throws IOException;
 
     public abstract boolean isEmpty();
     public abstract boolean isNotEmpty();
+    public abstract boolean hasOnlyFiles() throws IOException;
+    public abstract boolean hasOnlyDirectories() throws IOException;
     public abstract boolean isNotFoundInternalDirectories() throws IOException;
     public abstract boolean isNotFoundInternalFiles() throws IOException;
+    public abstract boolean contains(IFSObject object, boolean recursive) throws IOException;
     public abstract boolean clean() throws IOException;
 
     public abstract <T extends BaseDirectory> boolean deleteExcept(T... directories) throws IOException;
     public abstract <T extends BaseFile> boolean deleteExcept(T... files) throws IOException;
 
-    public abstract <ID extends BaseDirectory, IF extends BaseFile>
-    boolean deleteExcept(DoubleHStream<ID, IF> excludedFiles) throws IOException;
+    public abstract boolean deleteExcept(FileStream excludedFiles) throws IOException;
     public abstract boolean delete(String dirOrFileName) throws IOException;
 
     public abstract <T extends BaseDirectory>
@@ -93,6 +92,9 @@ public abstract class BaseDirectory implements IFSObject {
 
         return directory.equals(that.directory);
     }
+
+    @Override
+    public boolean notEquals(Object o) { return !equals(o); }
 
     @Override
     public int hashCode() { return directory.hashCode(); }

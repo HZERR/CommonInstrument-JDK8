@@ -8,6 +8,7 @@ import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * Extended version of the {@link ru.hzerr.stream.standard.StandardHStream} class.
@@ -176,14 +177,18 @@ public class HStream<T> implements BaseHStream<T, HStream<T>>, Functions<T>, Clo
     }
 
     @Override
-    public long count() {
-        return this.value.get().count();
-    }
+    public long count() { return this.value.get().count(); }
 
     @Override
     public HStream<T> parallel() {
         Supplier<Stream<T>> current = this.value;
         this.value = () -> current.get().parallel();
+        return this;
+    }
+
+    @Override
+    public HStream<T> parallelIfNeeded() {
+        if (count() > 1000) parallel();
         return this;
     }
 
@@ -212,6 +217,13 @@ public class HStream<T> implements BaseHStream<T, HStream<T>>, Functions<T>, Clo
             this.value = () -> Stream.of(newArray);
             this.parallel();
         } else this.value = () -> Stream.of(newArray);
+        return this;
+    }
+
+
+    @Override
+    public HStream<T> biFilter(Predicate<? super T> condition, Predicate<? super T> actionForElementsYes, Predicate<? super T> actionForElementsNo) {
+        this.filter(t -> condition.test(t) ? actionForElementsYes.test(t) : actionForElementsNo.test(t));
         return this;
     }
 
@@ -344,17 +356,31 @@ public class HStream<T> implements BaseHStream<T, HStream<T>>, Functions<T>, Clo
     public static <T> HStream<T> of(Stream<T> value) {
         return new HStream<>(value);
     }
-    public static <T> HStream<T> of(List<T> list) {
-        return new HStream<>((T[]) list.toArray());
-    }
-    public static <T> HStream<T> of(Enumeration<T> enumeration) {
-        if (enumeration == null || !enumeration.hasMoreElements()) return HStream.empty();
-        T[] values = (T[]) new Object[]{enumeration.nextElement()};
-        while (enumeration.hasMoreElements()) {
-            values = Arrays.copyOf(values, values.length + 1);
-            values[values.length - 1] = enumeration.nextElement();
-        }
+    public static <T> HStream<T> of(List<T> list) { return new HStream<>((T[]) list.toArray()); }
+    public static <T> HStream<T> of(Enumeration<T> e, boolean parallel) {
+        return of(StreamSupport.stream(
+                new Spliterators.AbstractSpliterator<>(Long.MAX_VALUE, Spliterator.ORDERED) {
 
-        return HStream.of(values);
+                    @Override
+                    public boolean tryAdvance(java.util.function.Consumer<? super T> action) {
+                        if (e.hasMoreElements()) {
+                            action.accept(e.nextElement());
+                            return true;
+                        }
+                        return false;
+                    }
+
+                    @Override
+                    public void forEachRemaining(java.util.function.Consumer<? super T> action) {
+                        while (e.hasMoreElements()) action.accept(e.nextElement());
+                    }
+                }, parallel));
     }
+    public static <T> HStream<T> of(Enumeration<T> e) { return of(e, false); }
+    public static <T> HStream<T> of(Spliterator<T> sourceSpliterator, boolean parallel) { return of(StreamSupport.stream(sourceSpliterator, parallel)); }
+    public static <T> HStream<T> of(Spliterator<T> sourceSpliterator) { return of(StreamSupport.stream(sourceSpliterator, false)); }
+    public static <T> HStream<T> of(Iterable<T> sourceIterable, boolean parallel) { return of(sourceIterable.spliterator(), parallel); }
+    public static <T> HStream<T> of(Iterable<T> sourceIterable) { return of(sourceIterable.spliterator()); }
+    public static <T> HStream<T> of(Iterator<T> sourceIterator, boolean parallel) { return of(() -> sourceIterator, parallel); }
+    public static <T> HStream<T> of(Iterator<T> sourceIterator) { return of(() -> sourceIterator); }
 }

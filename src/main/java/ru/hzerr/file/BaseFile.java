@@ -75,5 +75,8 @@ public abstract class BaseFile implements IFSObject {
     }
 
     @Override
+    public boolean notEquals(Object o) { return !equals(o); }
+
+    @Override
     public int hashCode() { return file.hashCode(); }
 }

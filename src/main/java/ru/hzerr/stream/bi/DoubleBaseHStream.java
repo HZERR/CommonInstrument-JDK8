@@ -7,6 +7,7 @@ import ru.hzerr.stream.function.Predicate;
 import java.util.Comparator;
 import java.util.Optional;
 
+@Deprecated
 public interface DoubleBaseHStream<TYPE, TYPE2, S extends DoubleBaseHStream<TYPE, TYPE2, S>> {
 
     <R> S filter(Class<? extends R> clazz, Predicate<? super R> action);

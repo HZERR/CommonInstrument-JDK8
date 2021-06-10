@@ -1,7 +1,6 @@
 package ru.hzerr.file;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 import ru.hzerr.file.exception.directory.NoSuchHDirectoryException;
 import ru.hzerr.file.exception.file.*;
 import ru.hzerr.stream.HStream;
@@ -9,8 +8,11 @@ import ru.hzerr.stream.HStream;
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -21,6 +23,7 @@ public class HFile extends BaseFile {
     public HFile(String parent, String child) { super(parent, child); }
     public HFile(BaseDirectory parent, String child) { super(parent, child); }
     public HFile(URI uri) { super(uri); }
+    HFile(Path path) { super(path.toString()); }
 
     @Override
     public String getName() { return this.file.getName(); }
@@ -198,6 +201,18 @@ public class HFile extends BaseFile {
         BigDecimal size = new BigDecimal(FileUtils.sizeOfAsBigInteger(file));
         return SizeType.BYTE.to(type, size).setScale(1, RoundingMode.DOWN).doubleValue();
     }
+
+    @Override
+    public Path asPath() { return file.toPath(); }
+
+    @Override
+    public File asIOFile() { return file; }
+
+    @Override
+    public URI asURI() { return file.toURI(); }
+
+    @Override
+    public URL asURL() throws MalformedURLException { return file.toURI().toURL(); }
 
     private boolean isHierarchicalChild0(BaseDirectory superParent) {
         BaseDirectory superDirectory = getParent();

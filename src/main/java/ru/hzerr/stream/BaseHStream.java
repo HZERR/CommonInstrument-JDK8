@@ -39,6 +39,7 @@ public interface BaseHStream<T, S extends BaseHStream<T, S>> {
     boolean noneMatch(Predicate<? super T> action);
 
     S parallel();
+    S parallelIfNeeded();
     boolean isParallel();
 
     Optional<T> findFirst();
