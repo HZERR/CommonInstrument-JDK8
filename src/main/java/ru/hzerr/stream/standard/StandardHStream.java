@@ -1,9 +1,12 @@
 package ru.hzerr.stream.standard;
 
+import ru.hzerr.stream.Receiver;
+
 import java.util.*;
 import java.util.function.*;
 import java.util.stream.Collector;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * A base class that allows you to reuse {@link java.util.stream.Stream}
@@ -16,7 +19,12 @@ public class StandardHStream<T> implements StandardBaseHStream<T, StandardHStrea
 
     private StandardHStream() { this.value = Stream::empty; }
     private StandardHStream(T... values) { this.value = () -> Stream.of(values); }
-    private StandardHStream(Stream<T> stream) { this.value = () -> stream; }
+    private StandardHStream(MapBoxer<?, T> mapBoxer) { this.value = mapBoxer::apply; }
+    private StandardHStream(T seed, UnaryOperator<T> f) { this.value = () -> Stream.iterate(seed, f); }
+    private StandardHStream(T seed, Predicate<? super T> hasNext, UnaryOperator<T> next) { this.value = () -> Stream.iterate(seed, hasNext, next); }
+    private StandardHStream(StandardHStream<? extends T> a, StandardHStream<? extends T> b) {
+        this.value = () -> StreamSupport.stream(new ConcatSpliterator.OfRef<>((Spliterator<T>) a.spliterator(), (Spliterator<T>) b.spliterator()), a.isParallel() || b.isParallel());
+    }
     private StandardHStream(Supplier<Stream<T>> value, boolean isParallel) {
         this.value = value;
         if (isParallel) {
@@ -25,6 +33,12 @@ public class StandardHStream<T> implements StandardBaseHStream<T, StandardHStrea
     }
 
     private Supplier<Stream<T>> value;
+
+    @Override
+    public Iterator<T> iterator() { return this.value.get().iterator(); }
+
+    @Override
+    public Spliterator<T> spliterator() { return this.value.get().spliterator(); }
 
     @Override
     public StandardHStream<T> filter(Predicate<? super T> action) {
@@ -63,6 +77,13 @@ public class StandardHStream<T> implements StandardBaseHStream<T, StandardHStrea
     public boolean noneMatch(Predicate<? super T> action) { return this.value.get().noneMatch(action); }
 
     @Override
+    public StandardHStream<T> sequential() {
+        Supplier<Stream<T>> current = this.value;
+        this.value = () -> current.get().sequential();
+        return this;
+    }
+
+    @Override
     public void forEach(Consumer<? super T> action) { this.value.get().forEach(action); }
 
     @Override
@@ -71,7 +92,7 @@ public class StandardHStream<T> implements StandardBaseHStream<T, StandardHStrea
     @Override
     public <R> StandardHStream<R> map(Function<? super T, ? extends R> mapper) {
         Supplier<Stream<T>> current = this.value;
-        return new StandardHStream<>(current.get().map(mapper));
+        return new StandardHStream<>(MapBoxer.create(current, mapper));
     }
 
     @Override
@@ -195,16 +216,177 @@ public class StandardHStream<T> implements StandardBaseHStream<T, StandardHStrea
 
     public static <T> StandardHStream<T> empty() { return new StandardHStream<>(); }
     public static <T> StandardHStream<T> of(T... values) { return new StandardHStream<>(values); }
-    public static <T> StandardHStream<T> of(Stream<T> value) { return new StandardHStream<>(value); }
+    public static <T> StandardHStream<T> of(Supplier<Stream<T>> stream, boolean isParallel) { return new StandardHStream<>(stream, isParallel); }
+    public static <T> StandardHStream<T> of(Supplier<Stream<T>> stream) { return new StandardHStream<>(stream, false); }
     public static <T> StandardHStream<T> of(List<T> list) { return new StandardHStream<>((T) list.toArray()); }
     public static <T> StandardHStream<T> of(Enumeration<T> enumeration) {
-        if (enumeration == null || !enumeration.hasMoreElements()) return StandardHStream.empty();
-        T[] values = (T[]) new Object[] {enumeration.nextElement()};
-        while (enumeration.hasMoreElements()) {
-            values = Arrays.copyOf(values, values.length + 1);
-            values[values.length - 1] = enumeration.nextElement();
+        List<T> values = Collections.list(enumeration);
+        return of((T[]) values.toArray());
+    }
+    public static <T> StandardHStream<T> of(Receiver<Stream<T>> streamReceiver, boolean isParallel) { return new StandardHStream<>(streamReceiver.asSupplier(), isParallel); }
+    public static <T> StandardHStream<T> of(Receiver<Stream<T>> streamReceiver) { return new StandardHStream<>(streamReceiver.asSupplier(), false); }
+    public static <T> StandardHStream<T> of(Receiver.Void<Stream<T>> streamReceiver, boolean isParallel) { return new StandardHStream<>(streamReceiver.asSupplier(), isParallel); }
+    public static <T> StandardHStream<T> of(Receiver.Void<Stream<T>> streamReceiver) { return new StandardHStream<>(streamReceiver.asSupplier(), false); }
+    public static <T> StandardHStream<T> iterate(final T seed, final UnaryOperator<T> f) { return new StandardHStream<>(seed, f); }
+    public static <T> StandardHStream<T> iterate(T seed, Predicate<? super T> hasNext, UnaryOperator<T> next) { return new StandardHStream<>(seed, hasNext, next); }
+    public static <T> StandardHStream<T> concat(StandardHStream<? extends T> a, StandardHStream<? extends T> b) { return new StandardHStream<>(a, b); }
+
+    abstract static class ConcatSpliterator<T, T_SPLITR extends Spliterator<T>> implements Spliterator<T> {
+        protected final T_SPLITR aSpliterator;
+        protected final T_SPLITR bSpliterator;
+        // True when no split has occurred, otherwise false
+        boolean beforeSplit;
+        // Never read after splitting
+        final boolean unsized;
+
+        public ConcatSpliterator(T_SPLITR aSpliterator, T_SPLITR bSpliterator) {
+            this.aSpliterator = aSpliterator;
+            this.bSpliterator = bSpliterator;
+            beforeSplit = true;
+            // The spliterator is known to be unsized before splitting if the
+            // sum of the estimates overflows.
+            unsized = aSpliterator.estimateSize() + bSpliterator.estimateSize() < 0;
         }
 
-        return StandardHStream.of(values);
+        @Override
+        public T_SPLITR trySplit() {
+            @SuppressWarnings("unchecked")
+            T_SPLITR ret = beforeSplit ? aSpliterator : (T_SPLITR) bSpliterator.trySplit();
+            beforeSplit = false;
+            return ret;
+        }
+
+        @Override
+        public boolean tryAdvance(java.util.function.Consumer<? super T> consumer) {
+            boolean hasNext;
+            if (beforeSplit) {
+                hasNext = aSpliterator.tryAdvance(consumer);
+                if (!hasNext) {
+                    beforeSplit = false;
+                    hasNext = bSpliterator.tryAdvance(consumer);
+                }
+            }
+            else
+                hasNext = bSpliterator.tryAdvance(consumer);
+            return hasNext;
+        }
+
+        @Override
+        public void forEachRemaining(java.util.function.Consumer<? super T> consumer) {
+            if (beforeSplit)
+                aSpliterator.forEachRemaining(consumer);
+            bSpliterator.forEachRemaining(consumer);
+        }
+
+        @Override
+        public long estimateSize() {
+            if (beforeSplit) {
+                // If one or both estimates are Long.MAX_VALUE then the sum
+                // will either be Long.MAX_VALUE or overflow to a negative value
+                long size = aSpliterator.estimateSize() + bSpliterator.estimateSize();
+                return (size >= 0) ? size : Long.MAX_VALUE;
+            }
+            else {
+                return bSpliterator.estimateSize();
+            }
+        }
+
+        @Override
+        public int characteristics() {
+            if (beforeSplit) {
+                // Concatenation loses DISTINCT and SORTED characteristics
+                return aSpliterator.characteristics() & bSpliterator.characteristics()
+                        & ~(Spliterator.DISTINCT | Spliterator.SORTED
+                        | (unsized ? Spliterator.SIZED | Spliterator.SUBSIZED : 0));
+            }
+            else {
+                return bSpliterator.characteristics();
+            }
+        }
+
+        @Override
+        public Comparator<? super T> getComparator() {
+            if (beforeSplit)
+                throw new IllegalStateException();
+            return bSpliterator.getComparator();
+        }
+
+        static class OfRef<T> extends StandardHStream.ConcatSpliterator<T, Spliterator<T>> {
+            OfRef(Spliterator<T> aSpliterator, Spliterator<T> bSpliterator) {
+                super(aSpliterator, bSpliterator);
+            }
+        }
+
+        private abstract static class OfPrimitive<T, T_CONS, T_SPLITR extends Spliterator.OfPrimitive<T, T_CONS, T_SPLITR>>
+                extends StandardHStream.ConcatSpliterator<T, T_SPLITR>
+                implements Spliterator.OfPrimitive<T, T_CONS, T_SPLITR> {
+            private OfPrimitive(T_SPLITR aSpliterator, T_SPLITR bSpliterator) {
+                super(aSpliterator, bSpliterator);
+            }
+
+            @Override
+            public boolean tryAdvance(T_CONS action) {
+                boolean hasNext;
+                if (beforeSplit) {
+                    hasNext = aSpliterator.tryAdvance(action);
+                    if (!hasNext) {
+                        beforeSplit = false;
+                        hasNext = bSpliterator.tryAdvance(action);
+                    }
+                }
+                else
+                    hasNext = bSpliterator.tryAdvance(action);
+                return hasNext;
+            }
+
+            @Override
+            public void forEachRemaining(T_CONS action) {
+                if (beforeSplit)
+                    aSpliterator.forEachRemaining(action);
+                bSpliterator.forEachRemaining(action);
+            }
+        }
+
+        static class OfInt
+                extends StandardHStream.ConcatSpliterator.OfPrimitive<Integer, IntConsumer, Spliterator.OfInt>
+                implements Spliterator.OfInt {
+            OfInt(Spliterator.OfInt aSpliterator, Spliterator.OfInt bSpliterator) {
+                super(aSpliterator, bSpliterator);
+            }
+        }
+
+        static class OfLong
+                extends StandardHStream.ConcatSpliterator.OfPrimitive<Long, LongConsumer, Spliterator.OfLong>
+                implements Spliterator.OfLong {
+            OfLong(Spliterator.OfLong aSpliterator, Spliterator.OfLong bSpliterator) {
+                super(aSpliterator, bSpliterator);
+            }
+        }
+
+        static class OfDouble
+                extends StandardHStream.ConcatSpliterator.OfPrimitive<Double, DoubleConsumer, Spliterator.OfDouble>
+                implements Spliterator.OfDouble {
+            OfDouble(Spliterator.OfDouble aSpliterator, Spliterator.OfDouble bSpliterator) {
+                super(aSpliterator, bSpliterator);
+            }
+        }
+    }
+
+    @SuppressWarnings("ClassCanBeRecord")
+    private static class MapBoxer<T, R> {
+
+        private final Supplier<Stream<T>> container;
+        private final Function<? super T, ? extends R> mapAction;
+
+        private MapBoxer(Supplier<Stream<T>> container, Function<? super T, ? extends R> mapAction) {
+            this.container = container;
+            this.mapAction = mapAction;
+        }
+
+        public Stream<R> apply() { return container.get().map(mapAction); }
+
+        public static <T, R> MapBoxer<T, R> create(Supplier<Stream<T>> container, Function<? super T, ? extends R> mapAction) {
+            return new MapBoxer<>(container, mapAction);
+        }
     }
 }

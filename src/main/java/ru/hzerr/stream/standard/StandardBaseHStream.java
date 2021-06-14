@@ -1,7 +1,9 @@
 package ru.hzerr.stream.standard;
 
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.Optional;
+import java.util.Spliterator;
 import java.util.function.*;
 import java.util.stream.Collector;
 
@@ -11,6 +13,10 @@ import java.util.stream.Collector;
  */
 @SuppressWarnings({"unused", "UnusedReturnValue"})
 public interface StandardBaseHStream<T, S extends StandardBaseHStream<T, S>> {
+
+    Iterator<T> iterator();
+
+    Spliterator<T> spliterator();
 
     S filter(Predicate<? super T> action);
 
@@ -31,6 +37,7 @@ public interface StandardBaseHStream<T, S extends StandardBaseHStream<T, S>> {
     boolean anyMatch(Predicate<? super T> action);
     boolean noneMatch(Predicate<? super T> action);
 
+    S sequential();
     S parallel();
     boolean isParallel();
 

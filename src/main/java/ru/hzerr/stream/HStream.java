@@ -9,10 +9,6 @@ import ru.hzerr.stream.function.Consumer;
 import ru.hzerr.stream.function.Function;
 import ru.hzerr.stream.function.Predicate;
 
-import java.nio.file.FileVisitOption;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.function.*;
@@ -33,24 +29,9 @@ public class HStream<T> implements BaseHStream<T, HStream<T>>, Functions<T>, Clo
     private HStream(T... values) { this.value = () -> Stream.of(values); }
     private HStream(Stream<T> stream) { this.value = () -> stream; }
     private HStream(MapBoxer<?, T> mapBoxer) { this.value = mapBoxer::apply; }
-    private HStream(Enumeration<T> e, boolean isParallel) {
-        this.value = () -> StreamSupport.stream(
-                new Spliterators.AbstractSpliterator<>(Long.MAX_VALUE, Spliterator.ORDERED) {
-
-                @Override
-                public boolean tryAdvance(java.util.function.Consumer<? super T> action) {
-                    if (e.hasMoreElements()) {
-                        action.accept(e.nextElement());
-                        return true;
-                    }
-                    return false;
-                }
-
-                @Override
-                public void forEachRemaining(java.util.function.Consumer<? super T> action) {
-                    while (e.hasMoreElements()) action.accept(e.nextElement());
-                }
-            }, isParallel);
+    private HStream(Enumeration<T> e) {
+        List<T> values = Collections.list(e);
+        this.value = () -> Stream.of((T[]) values.toArray());
     }
     private HStream(Spliterator<T> spliterator, boolean isParallel) { this.value = () -> StreamSupport.stream(spliterator, isParallel); }
     private HStream(Iterable<T> iterable, boolean isParallel) { this.value = () -> StreamSupport.stream(iterable.spliterator(), isParallel); }
@@ -396,8 +377,7 @@ public class HStream<T> implements BaseHStream<T, HStream<T>>, Functions<T>, Clo
     public static <T> HStream<T> empty() { return new HStream<>(); }
     public static <T> HStream<T> of(T... values) { return new HStream<>(values); }
     public static <T> HStream<T> of(List<T> list) { return new HStream<>((T[]) list.toArray()); }
-    public static <T> HStream<T> of(Enumeration<T> e, boolean isParallel) { return new HStream<>(e, isParallel); }
-    public static <T> HStream<T> of(Enumeration<T> e) { return new HStream<>(e, false); }
+    public static <T> HStream<T> of(Enumeration<T> e) { return new HStream<>(e); }
     public static <T> HStream<T> of(Spliterator<T> sourceSpliterator, boolean isParallel) { return new HStream<>(sourceSpliterator, isParallel); }
     public static <T> HStream<T> of(Spliterator<T> sourceSpliterator) { return new HStream<>(sourceSpliterator, false); }
     public static <T> HStream<T> of(Iterable<T> sourceIterable, boolean isParallel) { return new HStream<>(sourceIterable, isParallel); }
