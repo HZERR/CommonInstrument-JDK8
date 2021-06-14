@@ -1,4 +1,4 @@
-package ru.hzerr.file;
+package ru.hzerr.file.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,7 +7,6 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.METHOD)
-// Означает, что метод не включает в себя рекурсивное решение
-public @interface NotRecursive {
-    boolean value() default false;
+// Означает, что метод может включать и не включать в себя рекурсивное решение
+public @interface MaybeRecursive {
 }

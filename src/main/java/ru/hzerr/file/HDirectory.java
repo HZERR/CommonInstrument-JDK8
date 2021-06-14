@@ -1,6 +1,9 @@
 package ru.hzerr.file;
 
 import org.apache.commons.io.FileUtils;
+import ru.hzerr.file.annotation.MaybeRecursive;
+import ru.hzerr.file.annotation.NotRecursive;
+import ru.hzerr.file.annotation.Recursive;
 import ru.hzerr.file.exception.directory.HDirectoryCreateImpossibleException;
 import ru.hzerr.file.exception.directory.HDirectoryIsNotDirectoryException;
 import ru.hzerr.file.exception.directory.NoSuchHDirectoryException;
@@ -8,9 +11,8 @@ import ru.hzerr.file.exception.file.HFileCreateImpossibleException;
 import ru.hzerr.file.exception.file.HFileCreationFailedException;
 import ru.hzerr.file.exception.file.HFileIsNotFileException;
 import ru.hzerr.file.exception.file.NoSuchHFileException;
-import ru.hzerr.file.stream.IFSObjects;
-import ru.hzerr.stream.HStream;
 import ru.hzerr.file.stream.FileStream;
+import ru.hzerr.stream.HStream;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,14 +21,10 @@ import java.math.RoundingMode;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Iterator;
+import java.nio.file.*;
 import java.util.Objects;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.stream.StreamSupport;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 @SuppressWarnings("unchecked")
 public class HDirectory extends BaseDirectory {
@@ -60,7 +58,7 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     public HDirectory createSubDirectory(String dirName) throws HDirectoryIsNotDirectoryException, HDirectoryCreateImpossibleException {
-        HDirectory subDirectory =  new HDirectory(this, dirName);
+        HDirectory subDirectory = new HDirectory(this, dirName);
         subDirectory.create();
         return subDirectory;
     }
@@ -83,78 +81,143 @@ public class HDirectory extends BaseDirectory {
     @NotRecursive
     public HStream<HFile> getFiles() throws IOException {
         checkExists(this);
-        return this.openDirectoryStream(path -> !Files.isDirectory(path), paths -> {
-            return HStream.of(paths.spliterator()).map(HFile::new);
-        });
+        return HStream.of(Files.list(directory.toPath()).spliterator())
+                .filter(this::isNotDirectory)
+                .map(HFile::new);
     }
 
     @Override
     @NotRecursive
     public HStream<HDirectory> getDirectories() throws IOException {
         checkExists(this);
-        return this.openDirectoryStream(Files::isDirectory, paths -> {
-            return HStream.of(paths.spliterator()).map(HDirectory::new);
-        });
+        return HStream.of(Files.list(directory.toPath()).spliterator())
+                .filter(Files::isDirectory)
+                .map(HDirectory::new);
     }
 
     @Override
-    public FileStream getFiles(boolean recursive) throws IOException {
+    @MaybeRecursive
+    public FileStream getAllFiles(boolean recursive) throws IOException {
         checkExists(this);
-        if (recursive) return FileStream.of(walk());
-        return this.openDirectoryStream(paths -> {
-            return FileStream.of(HStream.of(paths.spliterator()));
-        });
+        if (recursive) {
+            return FileStream.of(walk());
+        } else
+            return FileStream.of(Files.list(directory.toPath()).spliterator());
     }
 
+    @Override
+    @MaybeRecursive
+    public HStream<HFile> getFiles(boolean recursive) throws IOException {
+        checkExists(this);
+        if (recursive) {
+            return HStream.of(Files.walk(directory.toPath()).spliterator())
+                    .filter(path -> this.isNotDirectory(path) && !path.equals(directory.toPath()))
+                    .map(HFile::new);
+        } else
+            return getFiles();
+    }
+
+    @Override
+    @MaybeRecursive
+    public HStream<HDirectory> getDirectories(boolean recursive) throws IOException {
+        checkExists(this);
+        if (recursive) {
+            return HStream.of(Files.walk(directory.toPath()).spliterator())
+                    .filter(path -> Files.isDirectory(path) && !path.equals(directory.toPath()))
+                    .map(HDirectory::new);
+        } else
+            return getDirectories();
+    }
 
     @Override
     @NotRecursive
-    public <T extends BaseFile> HStream<T> getFilesExcept(T... filesToBeExcluded) throws IOException {
+    public <T extends BaseFile> HStream<HFile> getFilesExcept(T... filesToBeExcluded) throws IOException {
+        checkExists(this);
         final HStream<BaseFile> excluded = HStream.of(filesToBeExcluded);
-        final DirectoryStream.Filter<Path> FILE_FILTER = entry -> {
-            return !Files.isDirectory(entry) && excluded.noneMatch(file -> new HFile(entry).equals(file));
-        };
-        return this.openDirectoryStream(FILE_FILTER, paths -> (HStream<T>) HStream.of(paths.spliterator()).map(HFile::new));
+        return this.getFiles().filter(file -> excluded.noneMatch(file::equals));
     }
 
+    /**
+     * Пример входящих аргументов: java.exe, build.gradle
+     * Не используйте имена без расширения файла
+     */
     @Override
-    public <T extends BaseFile> HStream<T> getFilesExcept(String... fileNames) throws IOException {
+    @NotRecursive
+    public <T extends BaseFile> HStream<HFile> getFilesExcept(String... fileNames) throws IOException {
+        checkExists(this);
         final HStream<String> excludedFileNames = HStream.of(fileNames);
-        final DirectoryStream.Filter<Path> FILE_FILTER = entry -> {
-            return !Files.isDirectory(entry) && excludedFileNames.noneMatch(entry::endsWith);
-        };
-        return this.openDirectoryStream(FILE_FILTER, paths -> (HStream<T>) HStream.of(paths.spliterator()).map(HFile::new));
+        return this.getFiles()
+                .filter(file -> excludedFileNames.noneMatch(name -> file.getName().equals(name)));
+    }
+
+    @Override
+    public <T extends BaseFile> HStream<HFile> getFilesExcept(boolean recursive, T... filesToBeExcluded) throws IOException {
+        checkExists(this);
+        final HStream<BaseFile> excludedFiles = HStream.of(filesToBeExcluded);
+        if (recursive) {
+            return this.getFiles(true)
+                    .filter(file -> excludedFiles.noneMatch(file::equals));
+        } else
+            return this.getFilesExcept(filesToBeExcluded);
     }
 
     @Override
     @NotRecursive
-    public <T extends BaseDirectory> HStream<T> getDirectoriesExcept(T... filesToBeExcluded) throws IOException {
-        final HStream<BaseDirectory> excludedStream = HStream.of(filesToBeExcluded);
-        final DirectoryStream.Filter<Path> DIRECTORY_FILTER = entry -> {
-            if (Files.isDirectory(entry)) {
-                return excludedStream.noneMatch(dir -> new HDirectory(entry).equals(dir));
-            }
-
-            return false;
-        };
-        
-        return this.openDirectoryStream(DIRECTORY_FILTER, paths -> (HStream<T>) HStream.of(paths.spliterator()).map(HDirectory::new));
+    public <T extends BaseDirectory> HStream<HDirectory> getDirectoriesExcept(T... directoriesToBeExcluded) throws IOException {
+        checkExists(this);
+        final HStream<BaseDirectory> excludedStream = HStream.of(directoriesToBeExcluded);
+        return this.getDirectories()
+                .filter(dir -> excludedStream.noneMatch(dir::equals));
     }
 
     @Override
     @NotRecursive
-    public <T extends BaseDirectory> HStream<T> getDirectoriesExcept(String... directoryNames) throws IOException {
+    public <T extends BaseDirectory> HStream<HDirectory> getDirectoriesExcept(String... directoryNames) throws IOException {
+        checkExists(this);
         final HStream<String> names = HStream.of(directoryNames);
-        final DirectoryStream.Filter<Path> DIRECTORY_FILTER = entry -> names.noneMatch(entry::endsWith) && Files.isDirectory(entry);
-        return this.openDirectoryStream(DIRECTORY_FILTER, paths -> (HStream<T>) HStream.of(paths.spliterator()).map(HDirectory::new));
+        return this.getDirectories()
+                .filter(dir -> names.noneMatch(name -> dir.getName().equals(name)));
     }
 
     @Override
-    public FileStream getFilesExcept(FileStream filesToBeExcluded, boolean recursive) throws IOException {
-        final FileStream innerFiles = getFiles(recursive);
-        return innerFiles.filter(innerFile -> filesToBeExcluded.noneMatch(excludedFile -> innerFile.getLocation().equals(excludedFile.getLocation())));
+    public <T extends BaseDirectory> HStream<HDirectory> getDirectoriesExcept(boolean recursive, T... directoriesToBeExcluded) throws IOException {
+        checkExists(this);
+        final HStream<T> filesToBeExcluded = HStream.of(directoriesToBeExcluded);
+        if (recursive) {
+            return HStream.of(Files.find(directory.toPath(), Integer.MAX_VALUE, (path, basicFileAttributes) -> {
+                if (Files.isDirectory(path)) {
+                    HDirectory dir = new HDirectory(path);
+                    return filesToBeExcluded.allMatch(excludedDir -> {
+                        return excludedDir.notIsHierarchicalChild(dir) && dir.notIsHierarchicalChild(excludedDir);
+                    });
+                } else
+                    return false;
+            }).spliterator()).map(HDirectory::new);
+        } else
+            return this.getDirectoriesExcept(directoriesToBeExcluded);
     }
 
+    /**
+     * Возвращает список всех файлов текущего каталога, кроме тех, которые должны быть исключены
+     * @param filesToBeExcluded файлы, которые должны быть исключены
+     * @param recursive использовать все внутренние файлы для перебора или нет
+     * @return FileStream файлы, содержащиеся в текущем каталоге, кроме тех, которые были исключены
+     * @throws IOException в случае ошибки ввода-вывода
+     */
+    @Override
+    @MaybeRecursive
+    public FileStream getAllFilesExcept(FileStream filesToBeExcluded, boolean recursive) throws IOException {
+        checkExists(this);
+        if (recursive) {
+            FileStream filteredStream = this.getAllFiles(true);
+            return filteredStream
+                    .dirFilter(dir -> filesToBeExcluded.dirAllMatch(excludedDir -> {
+                        return excludedDir.notIsHierarchicalChild(dir) && dir.notIsHierarchicalChild(excludedDir);
+                    }) && filesToBeExcluded.fileAllMatch(excludedFile -> excludedFile.notIsHierarchicalChild(dir)))
+                    .fileFilter(file -> filesToBeExcluded.fileAllMatch(file::notEquals));
+        } else
+            return FileStream.of(walk()).filter(o -> filesToBeExcluded.noneMatch(o::equals));
+    }
 
     @Override
     public boolean isEmpty() {
@@ -164,7 +227,8 @@ public class HDirectory extends BaseDirectory {
         // the directory in the background
         if (fileNames != null) {
             return fileNames.length == 0;
-        } else throw new NoSuchHDirectoryException("Directory does not exist: " + directory);
+        } else
+            throw new NoSuchHDirectoryException("Directory does not exist: " + directory);
     }
 
     @Override
@@ -172,14 +236,15 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     public boolean hasOnlyFiles() throws IOException {
+        checkExists(this);
         int fileCount = 0;
         try (DirectoryStream<Path> paths = Files.newDirectoryStream(directory.toPath())) {
             while (paths.iterator().hasNext()) {
                 Path path = paths.iterator().next();
-                if (Files.isDirectory(path)) {
-                    return false;
-                } else
+                if (this.isNotDirectory(path)) {
                     fileCount = fileCount + 1;
+                }
+
             }
 
             return fileCount > 0;
@@ -188,14 +253,14 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     public boolean hasOnlyDirectories() throws IOException {
+        checkExists(this);
         int dirCount = 0;
         try (DirectoryStream<Path> paths = Files.newDirectoryStream(directory.toPath())) {
             while (paths.iterator().hasNext()) {
                 Path path = paths.iterator().next();
                 if (Files.isDirectory(path)) {
                     dirCount = dirCount + 1;
-                } else
-                    return false;
+                }
             }
 
             return dirCount > 0;
@@ -216,8 +281,92 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     public boolean contains(IFSObject object, boolean recursive) throws IOException {
-        FileStream files = this.getFiles(recursive);
+        checkExists(this);
+        FileStream files = this.getAllFiles(recursive);
         return files.anyMatch(object::equals);
+    }
+
+    @Override
+    public FileStream find(Predicate<? super IFSObject> matcher) throws IOException {
+        checkExists(this);
+        return this.getAllFiles(true).filter(matcher::test);
+    }
+
+    @Override
+    public FileStream find(String glob) throws IOException {
+        checkExists(this);
+        if (glob.equals("*"))
+            return this.getAllFiles(true);
+        final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + glob);
+        return FileStream.of(Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
+            return matcher.matches(path);
+        })));
+    }
+
+    /**
+     * Пример входящих аргументов метода: "java", "config", "persons"</br>
+     * Не используйте имена с расширением файла
+     */
+    @Override
+    public FileStream findByNames(String... names) throws IOException {
+        checkExists(this);
+        final HStream<String> includeNames = HStream.of(names);
+        return this.getAllFiles(true)
+                .filter(o -> includeNames.anyMatch(name -> o.getName().startsWith(name)));
+    }
+
+    @Override
+    public HStream<? extends BaseDirectory> findDirectories(Predicate<? super BaseDirectory> matcher) throws IOException {
+        checkExists(this);
+        return this.getDirectories(true).filter(matcher::test);
+    }
+
+    @Override
+    public HStream<? extends BaseDirectory> findDirectories(String glob) throws IOException {
+        checkExists(this);
+        if (glob.equals("*"))
+            return this.getDirectories(true);
+        final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + glob);
+        return HStream.of(Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
+            return Files.isDirectory(path) && matcher.matches(path);
+        })).spliterator()).map(HDirectory::new);
+    }
+
+    @Override
+    public HStream<? extends BaseDirectory> findDirectoriesByNames(String... names) throws IOException {
+        checkExists(this);
+        final HStream<String> includeNames = HStream.of(names);
+        return this.getDirectories(true)
+                .filter(o -> includeNames.anyMatch(name -> o.getName().equals(name)));
+    }
+
+    @Override
+    public HStream<? extends BaseFile> findFiles(Predicate<? super BaseFile> matcher) throws IOException {
+        checkExists(this);
+        return this.getFiles(true).filter(matcher::test);
+    }
+
+    @Override
+    public HStream<? extends BaseFile> findFiles(String glob) throws IOException {
+        checkExists(this);
+        if (glob.equals("*"))
+            return this.getFiles(true);
+        final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + glob);
+        return HStream.of(Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
+            return this.isNotDirectory(path) && matcher.matches(path);
+        })).spliterator()).map(HFile::new);
+    }
+
+    /**
+     * Пример входящих аргументов метода: "java", "config", "persons"</br>
+     * Не используйте имена с расширением файла
+     */
+    @Override
+    public HStream<? extends BaseFile> findFilesByNames(String... names) throws IOException {
+        checkExists(this);
+        final HStream<String> includeNames = HStream.of(names);
+        return this.getFiles(true)
+                .filter(o -> includeNames.anyMatch(name -> o.getName().startsWith(name)));
     }
 
     @Override
@@ -228,13 +377,13 @@ public class HDirectory extends BaseDirectory {
     public HDirectory getParent() { return new HDirectory(directory.getAbsoluteFile().getParent()); }
 
     /**
-     * Cleans a directory without deleting it
+     * Очищает полностью директорию без удаления текущего каталога
      */
     @Override
     public boolean clean() throws IOException {
         checkExists(this);
         FileUtils.cleanDirectory(directory);
-        return getFiles(true).count() == 1;
+        return getAllFiles(true).count() == 1;
     }
 
     /**
@@ -251,11 +400,12 @@ public class HDirectory extends BaseDirectory {
      * Удалить директорию, если данная директория не является ребенком по отношению к исключаемой директории
      */
     @Override
+    @Recursive
     public <T extends BaseDirectory> boolean deleteExcept(T... directories) throws IOException {
         checkExists(this);
         final HStream<BaseDirectory> excludedDirectories = HStream.of(directories);
-        FileStream filteredStream = this.getFiles(true);
-        if (filteredStream.count() > 32) filteredStream.parallel(IFSObjects.ALL);
+        FileStream filteredStream = this.getAllFiles(true);
+        filteredStream.parallelIfNeeded();
         filteredStream
                 .dirFilter(dir -> !dir.directory.equals(directory) && excludedDirectories.allMatch(excludedDir -> {
                     return excludedDir.notIsHierarchicalChild(dir) && dir.notIsHierarchicalChild(excludedDir);
@@ -266,11 +416,12 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
+    @Recursive
     public <T extends BaseFile> boolean deleteExcept(T... files) throws IOException {
         checkExists(this);
         final HStream<BaseFile> excludedFiles = HStream.of(files);
-        FileStream filteredStream = this.getFiles(true);
-        if (filteredStream.count() > 32) filteredStream.parallel(IFSObjects.ALL);
+        FileStream filteredStream = this.getAllFiles(true);
+        filteredStream.parallelIfNeeded();
         filteredStream
                 .dirFilter(dir -> !dir.directory.equals(directory) && excludedFiles.allMatch(excludedFile -> excludedFile.notIsHierarchicalChild(dir)))
                 .fileFilter(file -> excludedFiles.allMatch(file::notEquals))
@@ -282,8 +433,8 @@ public class HDirectory extends BaseDirectory {
     @Recursive
     public boolean deleteExcept(FileStream excludedFiles) throws IOException {
         checkExists(this);
-        FileStream filteredStream = this.getFiles(true);
-        if (filteredStream.count() > 32) filteredStream.parallel(IFSObjects.ALL);
+        FileStream filteredStream = this.getAllFiles(true);
+        filteredStream.parallelIfNeeded();
         filteredStream
                 .dirFilter(dir -> !dir.directory.equals(directory) && excludedFiles.dirAllMatch(excludedDir -> {
                             return excludedDir.notIsHierarchicalChild(dir) && dir.notIsHierarchicalChild(excludedDir);
@@ -374,41 +525,11 @@ public class HDirectory extends BaseDirectory {
         }
     }
 
-    private void openDirectoryStream(Consumer<DirectoryStream<Path>> consumer) throws IOException {
-        try (DirectoryStream<Path> paths = Files.newDirectoryStream(directory.toPath())) {
-            consumer.accept(paths);
-        }
-    }
-
-    private void openDirectoryStream(DirectoryStream.Filter<Path> filter, Consumer<DirectoryStream<Path>> consumer) throws IOException {
-        try (DirectoryStream<Path> paths = Files.newDirectoryStream(directory.toPath(), filter)) {
-            consumer.accept(paths);
-        }
-    }
-
-    private <T> T openDirectoryStream(Function<DirectoryStream<Path>, T> func) throws IOException {
-        try (DirectoryStream<Path> paths = Files.newDirectoryStream(directory.toPath())) {
-            return func.apply(paths);
-        }
-    }
-
-    private <T> T openDirectoryStream(DirectoryStream.Filter<Path> filter, Function<DirectoryStream<Path>, T> func) throws IOException {
-        try (DirectoryStream<Path> paths = Files.newDirectoryStream(directory.toPath(), filter)) {
-            return func.apply(paths);
-        }
-    }
-
-    private static <T> HStream<T> asHStream(Iterator<T> sourceIterator) {
-        return asHStream(sourceIterator, false);
-    }
-
-    private static <T> HStream<T> asHStream(Iterator<T> sourceIterator, boolean parallel) {
-        Iterable<T> iterable = () -> sourceIterator;
-        return HStream.of(StreamSupport.stream(iterable.spliterator(), parallel));
-    }
+    private boolean isNotDirectory(Path path) { return !Files.isDirectory(path); }
 
     private HStream<Path> walk() throws IOException {
-        return HStream.of(Files.walk(directory.toPath()));
+        return HStream.of(Files.walk(directory.toPath()).spliterator())
+                .filter(path -> !asPath().equals(path));
     }
 
     private boolean isHierarchicalChild0(BaseDirectory superParent) {

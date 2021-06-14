@@ -9,15 +9,20 @@ import ru.hzerr.stream.function.BinaryOperator;
 import ru.hzerr.stream.function.BiConsumer;
 
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.Optional;
+import java.util.Spliterator;
 import java.util.stream.Collector;
 
 /**
  * @author HZERR
  * @see java.util.stream.BaseStream
  */
-@SuppressWarnings({"UnusedReturnValue", "rawtypes", "unused"})
+@SuppressWarnings({"UnusedReturnValue", "unused"})
 public interface BaseHStream<T, S extends BaseHStream<T, S>> {
+
+    Iterator<T> iterator();
+    Spliterator<T> spliterator();
 
     S filter(Predicate<? super T> action);
 
@@ -38,6 +43,7 @@ public interface BaseHStream<T, S extends BaseHStream<T, S>> {
     boolean anyMatch(Predicate<? super T> action);
     boolean noneMatch(Predicate<? super T> action);
 
+    S sequential();
     S parallel();
     S parallelIfNeeded();
     boolean isParallel();
