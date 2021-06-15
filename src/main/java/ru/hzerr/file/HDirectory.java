@@ -22,6 +22,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.*;
+import java.nio.file.attribute.FileAttribute;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -511,6 +512,14 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     public URL asURL() throws MalformedURLException { return directory.toURI().toURL(); }
+
+    public static HDirectory createTempDirectory(String prefix, FileAttribute<?>... attributes) throws IOException {
+        return new HDirectory(Files.createTempDirectory(prefix, attributes));
+    }
+
+    public static HDirectory createTempDirectory(HDirectory parent, String prefix, FileAttribute<?>... attributes) throws IOException {
+        return new HDirectory(Files.createTempDirectory(parent.directory.toPath(), prefix, attributes));
+    }
 
     private void checkExists(IFSObject... objects) {
         Objects.requireNonNull(objects, "Objects");

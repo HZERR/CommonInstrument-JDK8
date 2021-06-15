@@ -1,6 +1,7 @@
 package ru.hzerr.file;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import ru.hzerr.file.exception.directory.NoSuchHDirectoryException;
 import ru.hzerr.file.exception.file.*;
 import ru.hzerr.stream.HStream;
@@ -12,7 +13,9 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -213,6 +216,33 @@ public class HFile extends BaseFile {
 
     @Override
     public URL asURL() throws MalformedURLException { return file.toURI().toURL(); }
+
+    public static HFile
+    createTempFile(String fileName, FileAttribute<?>... attributes) throws IOException {
+        return new HFile(Files.createTempFile(
+                FilenameUtils.getBaseName(fileName),
+                FilenameUtils.getExtension(fileName),
+                attributes));
+    }
+
+    public static HFile
+    createTempFile(HDirectory parent, String fileName, FileAttribute<?>... attributes) throws IOException {
+        return new HFile(Files.createTempFile(
+                parent.directory.toPath(),
+                FilenameUtils.getBaseName(fileName),
+                FilenameUtils.getExtension(fileName),
+                attributes));
+    }
+
+    public static HFile
+    createTempFile(String suffix, String prefix, FileAttribute<?>... attributes) throws IOException {
+        return new HFile(Files.createTempFile(suffix, prefix, attributes));
+    }
+
+    public static HFile
+    createTempFile(HDirectory parent, String suffix, String prefix, FileAttribute<?>... attributes) throws IOException {
+        return new HFile(Files.createTempFile(parent.directory.toPath(), suffix, prefix, attributes));
+    }
 
     private boolean isHierarchicalChild0(BaseDirectory superParent) {
         BaseDirectory superDirectory = getParent();
