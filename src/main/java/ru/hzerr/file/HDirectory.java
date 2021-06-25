@@ -25,7 +25,6 @@ import java.nio.file.*;
 import java.nio.file.attribute.FileAttribute;
 import java.util.Objects;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
 
 @SuppressWarnings("unchecked")
 public class HDirectory extends BaseDirectory {

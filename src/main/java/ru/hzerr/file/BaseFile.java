@@ -40,6 +40,10 @@ public abstract class BaseFile implements IFSObject {
 
     // METHODS
 
+    public abstract String getExtension();
+    public abstract String getBaseName();
+    public abstract <T extends BaseFile> boolean equalsExtension(T file);
+    public abstract <T extends BaseFile> boolean equalsBaseName(T file);
     public abstract void rename(String fullName) throws HFileRenameFailedException;
     public abstract void rename(String name, String extension) throws HFileRenameFailedException;
     public abstract <T extends BaseFile> void copyToFile(T file) throws IOException;

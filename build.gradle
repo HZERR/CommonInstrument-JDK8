@@ -43,7 +43,7 @@ dependencies {
 
 shadowJar {
     archiveBaseName.set('common-instrument')
-    archiveVersion.set('1.2.2.3')
+    archiveVersion.set('1.2.2.5')
     archiveClassifier.set('all')
     getDestinationDirectory().set(new File("${projectDir}/build"))
 }

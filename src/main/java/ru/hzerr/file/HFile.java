@@ -32,7 +32,21 @@ public class HFile extends BaseFile {
     public String getName() { return this.file.getName(); }
 
     @Override
+    public String getExtension() { return FilenameUtils.getExtension(this.file.getName()); }
+
+    @Override
+    public String getBaseName() { return FilenameUtils.getBaseName(this.file.getName()); }
+
+    @Override
     public String getLocation() { return this.file.getAbsolutePath(); }
+
+    @Override
+    public <T extends BaseFile>
+    boolean equalsExtension(T file) { return this.getExtension().equals(file.getExtension()); }
+
+    @Override
+    public <T extends BaseFile>
+    boolean equalsBaseName(T file) { return this.getBaseName().equals(file.getBaseName()); }
 
     @Override
     public void create() throws HFileIsNotFileException, HFileCreationFailedException, HFileCreateImpossibleException {
