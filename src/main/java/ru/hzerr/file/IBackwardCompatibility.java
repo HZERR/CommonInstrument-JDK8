@@ -6,7 +6,7 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.file.Path;
 
-public interface BackwardCompatibility {
+public interface IBackwardCompatibility {
 
     // Converts the current file to a path
     Path asPath();

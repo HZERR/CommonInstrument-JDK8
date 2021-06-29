@@ -49,6 +49,14 @@ public class HFile extends BaseFile {
     boolean equalsBaseName(T file) { return this.getBaseName().equals(file.getBaseName()); }
 
     @Override
+    public <T extends BaseFile>
+    boolean notEqualsExtension(T file) { return !equalsExtension(file); }
+
+    @Override
+    public <T extends BaseFile>
+    boolean notEqualsBaseName(T file) { return !equalsBaseName(file); }
+
+    @Override
     public void create() throws HFileIsNotFileException, HFileCreationFailedException, HFileCreateImpossibleException {
         if (file.exists()) {
             if (file.isDirectory()) {
