@@ -85,6 +85,9 @@ public class HFile extends BaseFile {
     }
 
     @Override
+    public void deleteOnExit() { this.file.deleteOnExit(); }
+
+    @Override
     public void rename(String fullName) throws HFileRenameFailedException {
         checkExists(this);
         File dest = new File(getParent().getLocation().concat(fullName));

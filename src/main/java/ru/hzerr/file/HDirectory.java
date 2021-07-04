@@ -461,6 +461,9 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
+    public void deleteOnExit() { this.directory.deleteOnExit(); }
+
+    @Override
     public <T extends BaseDirectory> boolean isHierarchicalChild(T superParent) {
         checkExists(this, superParent);
         try {

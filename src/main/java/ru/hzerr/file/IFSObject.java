@@ -10,6 +10,7 @@ public interface IFSObject extends IBackwardCompatibility, IObject {
     boolean exists();
     boolean notExists();
     boolean delete() throws IOException;
+    void deleteOnExit();
     <T extends BaseDirectory> T getParent();
     <T extends BaseDirectory> boolean isHierarchicalChild(T superParent);
     <T extends BaseDirectory> boolean notIsHierarchicalChild(T superParent);
