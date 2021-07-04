@@ -383,7 +383,7 @@ public class HDirectory extends BaseDirectory {
     public boolean clean() throws IOException {
         checkExists(this);
         FileUtils.cleanDirectory(directory);
-        return getAllFiles(true).count() == 1;
+        return getAllFiles(false).count() == 0;
     }
 
     /**
