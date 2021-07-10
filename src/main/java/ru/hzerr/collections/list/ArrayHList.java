@@ -1,7 +1,6 @@
 package ru.hzerr.collections.list;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import ru.hzerr.stream.HStream;
 
 import java.util.ArrayList;
@@ -10,6 +9,7 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 
 public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
 
@@ -29,6 +29,15 @@ public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
         return list;
     }
 
+    @Override
+    public void changeIf(UnaryOperator<E> changer, Predicate<E> condition) {
+        for (int i = 0; i < size(); i++) {
+            E element = get(i);
+            if (condition.test(element)) {
+                this.set(i, changer.apply(element));
+            }
+        }
+    }
 
     @Override
     public Optional<E> find(Predicate<E> predicate) {

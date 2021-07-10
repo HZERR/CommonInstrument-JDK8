@@ -6,6 +6,7 @@ import java.util.List;
 
 public interface HList<E> extends List<E>,
         Finder<E>,
+        Changer<E>,
         Contender<E>,
         Streamable<E> {
 

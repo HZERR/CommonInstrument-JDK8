@@ -57,14 +57,14 @@ public class HDirectory extends BaseDirectory {
     public String getLocation() { return this.directory.getAbsolutePath(); }
 
     @Override
-    public HDirectory createSubDirectory(String dirName) throws HDirectoryIsNotDirectoryException, HDirectoryCreateImpossibleException {
+    public BaseDirectory createSubDirectory(String dirName) throws HDirectoryIsNotDirectoryException, HDirectoryCreateImpossibleException {
         HDirectory subDirectory = new HDirectory(this, dirName);
         subDirectory.create();
         return subDirectory;
     }
 
     @Override
-    public HFile createSubFile(String fileName) throws HFileIsNotFileException, HFileCreationFailedException, HFileCreateImpossibleException {
+    public BaseFile createSubFile(String fileName) throws HFileIsNotFileException, HFileCreationFailedException, HFileCreateImpossibleException {
         checkExists(this);
         HFile subFile = new HFile(this, fileName);
         subFile.create();
@@ -72,14 +72,14 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
-    public HDirectory getSubDirectory(String dirName) { return new HDirectory(this, dirName); }
+    public BaseDirectory getSubDirectory(String dirName) { return new HDirectory(this, dirName); }
 
     @Override
-    public HFile getSubFile(String fileName) { return new HFile(this, fileName); }
+    public BaseFile getSubFile(String fileName) { return new HFile(this, fileName); }
 
     @Override
     @NotRecursive
-    public HStream<HFile> getFiles() throws IOException {
+    public HStream<BaseFile> getFiles() throws IOException {
         checkExists(this);
         return HStream.of(Files.list(directory.toPath()).spliterator())
                 .filter(this::isNotDirectory)
@@ -88,7 +88,7 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     @NotRecursive
-    public HStream<HDirectory> getDirectories() throws IOException {
+    public HStream<BaseDirectory> getDirectories() throws IOException {
         checkExists(this);
         return HStream.of(Files.list(directory.toPath()).spliterator())
                 .filter(Files::isDirectory)
@@ -107,7 +107,7 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     @MaybeRecursive
-    public HStream<HFile> getFiles(boolean recursive) throws IOException {
+    public HStream<BaseFile> getFiles(boolean recursive) throws IOException {
         checkExists(this);
         if (recursive) {
             return HStream.of(Files.walk(directory.toPath()).spliterator())
@@ -119,7 +119,7 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     @MaybeRecursive
-    public HStream<HDirectory> getDirectories(boolean recursive) throws IOException {
+    public HStream<BaseDirectory> getDirectories(boolean recursive) throws IOException {
         checkExists(this);
         if (recursive) {
             return HStream.of(Files.walk(directory.toPath()).spliterator())
@@ -131,7 +131,7 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     @NotRecursive
-    public <T extends BaseFile> HStream<HFile> getFilesExcept(T... filesToBeExcluded) throws IOException {
+    public <T extends BaseFile> HStream<BaseFile> getFilesExcept(T... filesToBeExcluded) throws IOException {
         checkExists(this);
         final HStream<BaseFile> excluded = HStream.of(filesToBeExcluded);
         return this.getFiles().filter(file -> excluded.noneMatch(file::equals));
@@ -143,7 +143,7 @@ public class HDirectory extends BaseDirectory {
      */
     @Override
     @NotRecursive
-    public <T extends BaseFile> HStream<HFile> getFilesExcept(String... fileNames) throws IOException {
+    public <T extends BaseFile> HStream<BaseFile> getFilesExcept(String... fileNames) throws IOException {
         checkExists(this);
         final HStream<String> excludedFileNames = HStream.of(fileNames);
         return this.getFiles()
@@ -151,7 +151,7 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
-    public <T extends BaseFile> HStream<HFile> getFilesExcept(boolean recursive, T... filesToBeExcluded) throws IOException {
+    public <T extends BaseFile> HStream<BaseFile> getFilesExcept(boolean recursive, T... filesToBeExcluded) throws IOException {
         checkExists(this);
         final HStream<BaseFile> excludedFiles = HStream.of(filesToBeExcluded);
         if (recursive) {
@@ -163,7 +163,7 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     @NotRecursive
-    public <T extends BaseDirectory> HStream<HDirectory> getDirectoriesExcept(T... directoriesToBeExcluded) throws IOException {
+    public <T extends BaseDirectory> HStream<BaseDirectory> getDirectoriesExcept(T... directoriesToBeExcluded) throws IOException {
         checkExists(this);
         final HStream<BaseDirectory> excludedStream = HStream.of(directoriesToBeExcluded);
         return this.getDirectories()
@@ -172,7 +172,7 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     @NotRecursive
-    public <T extends BaseDirectory> HStream<HDirectory> getDirectoriesExcept(String... directoryNames) throws IOException {
+    public <T extends BaseDirectory> HStream<BaseDirectory> getDirectoriesExcept(String... directoryNames) throws IOException {
         checkExists(this);
         final HStream<String> names = HStream.of(directoryNames);
         return this.getDirectories()
@@ -180,7 +180,7 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
-    public <T extends BaseDirectory> HStream<HDirectory> getDirectoriesExcept(boolean recursive, T... directoriesToBeExcluded) throws IOException {
+    public <T extends BaseDirectory> HStream<BaseDirectory> getDirectoriesExcept(boolean recursive, T... directoriesToBeExcluded) throws IOException {
         checkExists(this);
         final HStream<T> filesToBeExcluded = HStream.of(directoriesToBeExcluded);
         if (recursive) {
@@ -316,13 +316,13 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
-    public HStream<? extends BaseDirectory> findDirectories(Predicate<? super BaseDirectory> matcher) throws IOException {
+    public HStream<BaseDirectory> findDirectories(Predicate<? super BaseDirectory> matcher) throws IOException {
         checkExists(this);
         return this.getDirectories(true).filter(matcher::test);
     }
 
     @Override
-    public HStream<? extends BaseDirectory> findDirectories(String glob) throws IOException {
+    public HStream<BaseDirectory> findDirectories(String glob) throws IOException {
         checkExists(this);
         if (glob.equals("*"))
             return this.getDirectories(true);
@@ -333,7 +333,7 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
-    public HStream<? extends BaseDirectory> findDirectoriesByNames(String... names) throws IOException {
+    public HStream<BaseDirectory> findDirectoriesByNames(String... names) throws IOException {
         checkExists(this);
         final HStream<String> includeNames = HStream.of(names);
         return this.getDirectories(true)
@@ -341,13 +341,13 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
-    public HStream<? extends BaseFile> findFiles(Predicate<? super BaseFile> matcher) throws IOException {
+    public HStream<BaseFile> findFiles(Predicate<? super BaseFile> matcher) throws IOException {
         checkExists(this);
         return this.getFiles(true).filter(matcher::test);
     }
 
     @Override
-    public HStream<? extends BaseFile> findFiles(String glob) throws IOException {
+    public HStream<BaseFile> findFiles(String glob) throws IOException {
         checkExists(this);
         if (glob.equals("*"))
             return this.getFiles(true);
@@ -362,7 +362,7 @@ public class HDirectory extends BaseDirectory {
      * Не используйте имена с расширением файла
      */
     @Override
-    public HStream<? extends BaseFile> findFilesByNames(String... names) throws IOException {
+    public HStream<BaseFile> findFilesByNames(String... names) throws IOException {
         checkExists(this);
         final HStream<String> includeNames = HStream.of(names);
         return this.getFiles(true)

@@ -43,17 +43,17 @@ public abstract class BaseDirectory implements IFSObject {
     public abstract <T extends BaseDirectory> T getSubDirectory(String dirName);
     public abstract <T extends BaseFile> T getSubFile(String fileName);
 
-    public abstract HStream<? extends BaseFile> getFiles() throws IOException;
-    public abstract HStream<? extends BaseDirectory> getDirectories() throws IOException;
+    public abstract HStream<BaseFile> getFiles() throws IOException;
+    public abstract HStream<BaseDirectory> getDirectories() throws IOException;
     public abstract FileStream getAllFiles(boolean recursive) throws IOException;
-    public abstract HStream<? extends BaseFile> getFiles(boolean recursive) throws IOException;
-    public abstract HStream<? extends BaseDirectory> getDirectories(boolean recursive) throws IOException;
-    public abstract <T extends BaseFile> HStream<? extends BaseFile> getFilesExcept(T... filesToBeExcluded) throws IOException;
-    public abstract <T extends BaseFile> HStream<? extends BaseFile> getFilesExcept(String... fileNamesToBeExcluded) throws IOException;
-    public abstract <T extends BaseFile> HStream<? extends BaseFile> getFilesExcept(boolean recursive, T... filesToBeExcluded) throws IOException;
-    public abstract <T extends BaseDirectory> HStream<? extends BaseDirectory> getDirectoriesExcept(T... filesToBeExcluded) throws IOException;
-    public abstract <T extends BaseDirectory> HStream<? extends BaseDirectory> getDirectoriesExcept(String... filesToBeExcluded) throws IOException;
-    public abstract <T extends BaseDirectory> HStream<? extends BaseDirectory> getDirectoriesExcept(boolean recursive, T... fileNamesToBeExcluded) throws IOException;
+    public abstract HStream<BaseFile> getFiles(boolean recursive) throws IOException;
+    public abstract HStream<BaseDirectory> getDirectories(boolean recursive) throws IOException;
+    public abstract <T extends BaseFile> HStream<BaseFile> getFilesExcept(T... filesToBeExcluded) throws IOException;
+    public abstract <T extends BaseFile> HStream<BaseFile> getFilesExcept(String... fileNamesToBeExcluded) throws IOException;
+    public abstract <T extends BaseFile> HStream<BaseFile> getFilesExcept(boolean recursive, T... filesToBeExcluded) throws IOException;
+    public abstract <T extends BaseDirectory> HStream<BaseDirectory> getDirectoriesExcept(T... filesToBeExcluded) throws IOException;
+    public abstract <T extends BaseDirectory> HStream<BaseDirectory> getDirectoriesExcept(String... filesToBeExcluded) throws IOException;
+    public abstract <T extends BaseDirectory> HStream<BaseDirectory> getDirectoriesExcept(boolean recursive, T... fileNamesToBeExcluded) throws IOException;
 
     public abstract FileStream getAllFilesExcept(FileStream filesToBeExcluded, boolean recursive) throws IOException;
 
@@ -67,12 +67,12 @@ public abstract class BaseDirectory implements IFSObject {
     public abstract FileStream find(Predicate<? super IFSObject> matcher) throws IOException;
     public abstract FileStream find(String glob) throws IOException;
     public abstract FileStream findByNames(String... names) throws IOException;
-    public abstract HStream<? extends BaseDirectory> findDirectories(Predicate<? super BaseDirectory> matcher) throws IOException;
-    public abstract HStream<? extends BaseDirectory> findDirectories(String glob) throws IOException;
-    public abstract HStream<? extends BaseDirectory> findDirectoriesByNames(String... names) throws IOException;
-    public abstract HStream<? extends BaseFile> findFiles(Predicate<? super BaseFile> matcher) throws IOException;
-    public abstract HStream<? extends BaseFile> findFiles(String glob) throws IOException;
-    public abstract HStream<? extends BaseFile> findFilesByNames(String... names) throws IOException;
+    public abstract HStream<BaseDirectory> findDirectories(Predicate<? super BaseDirectory> matcher) throws IOException;
+    public abstract HStream<BaseDirectory> findDirectories(String glob) throws IOException;
+    public abstract HStream<BaseDirectory> findDirectoriesByNames(String... names) throws IOException;
+    public abstract HStream<BaseFile> findFiles(Predicate<? super BaseFile> matcher) throws IOException;
+    public abstract <T extends BaseFile> HStream<T> findFiles(String glob) throws IOException;
+    public abstract HStream<BaseFile> findFilesByNames(String... names) throws IOException;
     public abstract boolean clean() throws IOException;
 
     public abstract <T extends BaseDirectory> boolean deleteExcept(T... directories) throws IOException;

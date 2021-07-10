@@ -15,6 +15,7 @@ import java.util.stream.Collector;
 import static java.util.stream.Collector.Characteristics.IDENTITY_FINISH;
 
 @SuppressWarnings("unused")
+@Deprecated
 public class HCollectors {
 
     private static final Set<Collector.Characteristics> CH_ID = Collections.unmodifiableSet(EnumSet.of(IDENTITY_FINISH));
