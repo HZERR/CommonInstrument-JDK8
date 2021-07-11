@@ -16,8 +16,8 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
 
 public class HFile extends BaseFile {
@@ -174,7 +174,7 @@ public class HFile extends BaseFile {
     }
 
     @Override
-    public void writeLines(String... lines) throws IOException { writeLines(List.of(lines)); }
+    public void writeLines(String... lines) throws IOException { writeLines(Arrays.asList(lines)); }
 
     public void writeLines(Collection<String> lines) throws HFileWriteException { writeLines(lines, false); }
 
@@ -284,10 +284,10 @@ public class HFile extends BaseFile {
         Objects.requireNonNull(objects, "Objects");
         for (IFSObject object : objects) {
             if (object.notExists()) {
-                if (object instanceof BaseFile that) {
-                    throw new NoSuchHFileException("File does not exist: " + that.file);
-                } else if (object instanceof BaseDirectory that) {
-                    throw new NoSuchHDirectoryException("Directory does not exist: " + that.directory);
+                if (object instanceof BaseFile) {
+                    throw new NoSuchHFileException("File does not exist: " + ((BaseFile) object).file);
+                } else if (object instanceof BaseDirectory) {
+                    throw new NoSuchHDirectoryException("Directory does not exist: " + ((BaseDirectory) object).directory);
                 } else throw new IllegalArgumentException("IFSObjects don't inherit BaseFile or BaseDirectory!");
             }
         }

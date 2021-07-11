@@ -147,13 +147,12 @@ public class FileStream implements BaseFileStream<HDirectory, HFile, FileStream>
     @Override
     public FileStream parallel(IFSObjects whichOneToApply) {
         switch (whichOneToApply) {
-            case FILE -> files.parallel();
-            case DIRECTORY -> directories.parallel();
-            case ALL -> {
+            case FILE: files.parallel();
+            case DIRECTORY: directories.parallel();
+            case ALL:
                 files.parallel();
                 directories.parallel();
-            }
-        };
+        }
 
         return this;
     }
@@ -167,11 +166,12 @@ public class FileStream implements BaseFileStream<HDirectory, HFile, FileStream>
 
     @Override
     public boolean isParallel(IFSObjects whichOneToWatch) {
-        return switch (whichOneToWatch) {
-            case FILE -> files.isParallel();
-            case DIRECTORY -> directories.isParallel();
-            case ALL -> files.isParallel() && directories.isParallel();
-        };
+        switch (whichOneToWatch) {
+            case FILE: return files.isParallel();
+            case DIRECTORY: return directories.isParallel();
+            case ALL: return files.isParallel() && directories.isParallel();
+            default: throw new IllegalArgumentException("The " + whichOneToWatch.name() + " object can't be handled");
+        }
     }
 
     @Override
@@ -381,12 +381,11 @@ public class FileStream implements BaseFileStream<HDirectory, HFile, FileStream>
     @Override
     public void wrap(IFSObjects whichOneToApply, java.util.function.Consumer<Exception> onError) {
         switch (whichOneToApply) {
-            case FILE -> files.wrap(onError);
-            case DIRECTORY -> directories.wrap(onError);
-            case ALL -> {
+            case FILE: files.wrap(onError);
+            case DIRECTORY: directories.wrap(onError);
+            case ALL:
                 files.wrap(onError);
                 directories.wrap(onError);
-            }
         }
     }
 

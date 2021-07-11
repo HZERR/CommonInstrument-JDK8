@@ -1,7 +1,6 @@
 package ru.hzerr.file;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 
 @SuppressWarnings("DuplicatedCode")
 public enum SizeType {
@@ -15,123 +14,136 @@ public enum SizeType {
     private static final BigDecimal BINARY_THOUSAND = BigDecimal.valueOf(1024);
 
     public BigDecimal toByte(BigDecimal size) {
-        return switch (this) {
-            case BYTE -> size;
-            case KB -> multiply(size, 1);
-            case MB -> multiply(size, 2);
-            case GB -> multiply(size, 3);
-            case TB -> multiply(size, 4);
-            case PB -> multiply(size, 5);
-        };
+        switch (this) {
+            case BYTE: return size;
+            case KB: return multiply(size, 1);
+            case MB: return multiply(size, 2);
+            case GB: return multiply(size, 3);
+            case TB: return multiply(size, 4);
+            case PB: return multiply(size, 5);
+            default: throw new IllegalStateException("The " + this.name() + " state cannot be handled");
+        }
     }
 
     public BigDecimal toKb(BigDecimal size) {
-        return switch (this) {
-            case BYTE -> divide(size, 1);
-            case KB -> size;
-            case MB -> multiply(size, 1);
-            case GB -> multiply(size, 2);
-            case TB -> multiply(size, 3);
-            case PB -> multiply(size, 4);
-        };
+        switch (this) {
+            case BYTE: return divide(size, 1);
+            case KB: return size;
+            case MB: return multiply(size, 1);
+            case GB: return multiply(size, 2);
+            case TB: return multiply(size, 3);
+            case PB: return multiply(size, 4);
+            default: throw new IllegalStateException("The " + this.name() + " state cannot be handled");
+        }
     }
 
     public BigDecimal toMb(BigDecimal size) {
-        return switch (this) {
-            case BYTE -> divide(size, 2);
-            case KB -> divide(size, 1);
-            case MB -> size;
-            case GB -> multiply(size, 1);
-            case TB -> multiply(size, 2);
-            case PB -> multiply(size, 3);
-        };
+        switch (this) {
+            case BYTE: return divide(size, 2);
+            case KB: return divide(size, 1);
+            case MB: return size;
+            case GB: return multiply(size, 1);
+            case TB: return multiply(size, 2);
+            case PB: return multiply(size, 3);
+            default: throw new IllegalStateException("The " + this.name() + " state cannot be handled");
+        }
     }
 
     public BigDecimal toGb(BigDecimal size) {
-        return switch (this) {
-            case BYTE -> divide(size, 3);
-            case KB -> divide(size, 2);
-            case MB -> divide(size, 1);
-            case GB -> size;
-            case TB -> multiply(size, 1);
-            case PB -> multiply(size, 2);
-        };
+        switch (this) {
+            case BYTE: return divide(size, 3);
+            case KB: return divide(size, 2);
+            case MB: return divide(size, 1);
+            case GB: return size;
+            case TB: return multiply(size, 1);
+            case PB: return multiply(size, 2);
+            default: throw new IllegalStateException("The " + this.name() + " state cannot be handled");
+        }
     }
 
     public BigDecimal toTb(BigDecimal size) {
-        return switch (this) {
-            case BYTE -> divide(size, 4);
-            case KB -> divide(size, 3);
-            case MB -> divide(size, 2);
-            case GB -> divide(size, 1);
-            case TB -> size;
-            case PB -> multiply(size, 1);
-        };
+        switch (this) {
+            case BYTE: return divide(size, 4);
+            case KB: return divide(size, 3);
+            case MB: return divide(size, 2);
+            case GB: return divide(size, 1);
+            case TB: return size;
+            case PB: return multiply(size, 1);
+            default: throw new IllegalStateException("The " + this.name() + " state cannot be handled");
+        }
     }
 
     public BigDecimal toPb(BigDecimal size) {
-        return switch (this) {
-            case BYTE -> divide(size, 5);
-            case KB -> divide(size, 4);
-            case MB -> divide(size, 3);
-            case GB -> divide(size, 2);
-            case TB -> divide(size, 1);
-            case PB -> size;
-        };
+        switch (this) {
+            case BYTE: return divide(size, 5);
+            case KB: return divide(size, 4);
+            case MB: return divide(size, 3);
+            case GB: return divide(size, 2);
+            case TB: return divide(size, 1);
+            case PB: return size;
+            default: throw new IllegalStateException("The " + this.name() + " state cannot be handled");
+        }
     }
 
-    @SuppressWarnings("BigDecimalMethodWithoutRoundingCalled")
     public BigDecimal to(SizeType type, BigDecimal size) {
-        return switch (this) {
-            case BYTE -> switch (type) {
-                case BYTE -> size;
-                case KB -> divide(size, 1);
-                case MB -> divide(size, 2);
-                case GB -> divide(size, 3);
-                case TB -> divide(size, 4);
-                case PB -> divide(size, 5);
-            };
-            case KB -> switch (type) {
-                case BYTE -> multiply(size, 1);
-                case KB -> size;
-                case MB -> divide(size, 1);
-                case GB -> divide(size, 2);
-                case TB -> divide(size, 3);
-                case PB -> divide(size, 4);
-            };
-            case MB -> switch (type) {
-                case BYTE -> multiply(size, 2);
-                case KB -> multiply(size, 1);
-                case MB -> size;
-                case GB -> divide(size, 1);
-                case TB -> divide(size, 2);
-                case PB -> divide(size, 3);
-            };
-            case GB -> switch (type) {
-                case BYTE -> multiply(size, 3);
-                case KB -> multiply(size, 2);
-                case MB -> multiply(size, 1);
-                case GB -> size;
-                case TB -> divide(size, 1);
-                case PB -> divide(size, 2);
-            };
-            case TB -> switch (type) {
-                case BYTE -> multiply(size, 4);
-                case KB -> multiply(size, 3);
-                case MB -> multiply(size, 2);
-                case GB -> multiply(size, 1);
-                case TB -> size;
-                case PB -> divide(size, 1);
-            };
-            case PB -> switch (type) {
-                case BYTE -> multiply(size, 5);
-                case KB -> multiply(size, 4);
-                case MB -> multiply(size, 3);
-                case GB -> multiply(size, 2);
-                case TB -> multiply(size, 1);
-                case PB -> size;
-            };
-        };
+        switch (this) {
+            case BYTE: switch (type) {
+                case BYTE: return size;
+                case KB: return divide(size, 1);
+                case MB: return divide(size, 2);
+                case GB: return divide(size, 3);
+                case TB: return divide(size, 4);
+                case PB: return divide(size, 5);
+                default: throw new IllegalArgumentException("The " + type.name() + " state cannot be handled");
+            }
+            case KB: switch (type) {
+                case BYTE: return multiply(size, 1);
+                case KB: return size;
+                case MB: return divide(size, 1);
+                case GB: return divide(size, 2);
+                case TB: return divide(size, 3);
+                case PB: return divide(size, 4);
+                default: throw new IllegalArgumentException("The " + type.name() + " state cannot be handled");
+            }
+            case MB: switch (type) {
+                case BYTE: return multiply(size, 2);
+                case KB: return multiply(size, 1);
+                case MB: return size;
+                case GB: return divide(size, 1);
+                case TB: return divide(size, 2);
+                case PB: return divide(size, 3);
+                default: throw new IllegalArgumentException("The " + type.name() + " state cannot be handled");
+            }
+            case GB: switch (type) {
+                case BYTE: return multiply(size, 3);
+                case KB: return multiply(size, 2);
+                case MB: return multiply(size, 1);
+                case GB: return size;
+                case TB: return divide(size, 1);
+                case PB: return divide(size, 2);
+                default: throw new IllegalArgumentException("The " + type.name() + " state cannot be handled");
+            }
+            case TB: switch (type) {
+                case BYTE: return multiply(size, 4);
+                case KB: return multiply(size, 3);
+                case MB: return multiply(size, 2);
+                case GB: return multiply(size, 1);
+                case TB: return size;
+                case PB: return divide(size, 1);
+                default: throw new IllegalArgumentException("The " + type.name() + " state cannot be handled");
+            }
+            case PB: switch (type) {
+                case BYTE: return multiply(size, 5);
+                case KB: return multiply(size, 4);
+                case MB: return multiply(size, 3);
+                case GB: return multiply(size, 2);
+                case TB: return multiply(size, 1);
+                case PB: return size;
+                default: throw new IllegalArgumentException("The " + type.name() + " state cannot be handled");
+            }
+
+            default: throw new IllegalStateException("The " + this.name() + " state cannot be handled");
+        }
     }
 
     private BigDecimal multiply(BigDecimal decimal, int count) {

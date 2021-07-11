@@ -103,9 +103,9 @@ public abstract class BaseDirectory implements IFSObject {
     public boolean equals(Object o) {
         if (this == o) return true;
 
-        if (!(o instanceof BaseDirectory that)) return false;
+        if (!(o instanceof BaseDirectory)) return false;
 
-        return directory.equals(that.directory);
+        return directory.equals(((BaseDirectory) o).directory);
     }
 
     @Override

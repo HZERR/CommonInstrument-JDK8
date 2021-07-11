@@ -527,10 +527,10 @@ public class HDirectory extends BaseDirectory {
         Objects.requireNonNull(objects, "Objects");
         for (IFSObject object : objects) {
             if (object.notExists()) {
-                if (object instanceof BaseFile that) {
-                    throw new NoSuchHFileException("File does not exist: " + that.file);
-                } else if (object instanceof BaseDirectory that) {
-                    throw new NoSuchHDirectoryException("Directory does not exist: " + that.directory);
+                if (object instanceof BaseFile) {
+                    throw new NoSuchHFileException("File does not exist: " + ((BaseFile) object).file);
+                } else if (object instanceof BaseDirectory) {
+                    throw new NoSuchHDirectoryException("Directory does not exist: " + ((BaseDirectory) object).directory);
                 } else throw new IllegalArgumentException("IFSObjects don't inherit BaseFile or BaseDirectory!");
             }
         }

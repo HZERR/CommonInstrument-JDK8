@@ -196,11 +196,9 @@ public class HOptional<T> {
             return true;
         }
 
-        if (!(obj instanceof HOptional<?> other)) {
-            return false;
-        }
+        if (!(obj instanceof HOptional<?>)) return false;
 
-        return Objects.equals(value, other.value);
+        return Objects.equals(value, ((HOptional<?>) obj).value);
     }
 
     @Override

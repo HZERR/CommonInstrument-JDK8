@@ -75,9 +75,9 @@ public abstract class BaseFile implements IFSObject {
     public boolean equals(Object o) {
         if (this == o) return true;
 
-        if (!(o instanceof BaseFile that)) return false;
+        if (!(o instanceof BaseFile)) return false;
 
-        return file.equals(that.file);
+        return file.equals(((BaseFile) o).file);
     }
 
     @Override

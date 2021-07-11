@@ -21,7 +21,6 @@ public class StandardHStream<T> implements StandardBaseHStream<T, StandardHStrea
     private StandardHStream(T... values) { this.value = () -> Stream.of(values); }
     private StandardHStream(MapBoxer<?, T> mapBoxer) { this.value = mapBoxer::apply; }
     private StandardHStream(T seed, UnaryOperator<T> f) { this.value = () -> Stream.iterate(seed, f); }
-    private StandardHStream(T seed, Predicate<? super T> hasNext, UnaryOperator<T> next) { this.value = () -> Stream.iterate(seed, hasNext, next); }
     private StandardHStream(StandardHStream<? extends T> a, StandardHStream<? extends T> b) {
         this.value = () -> StreamSupport.stream(new ConcatSpliterator.OfRef<>((Spliterator<T>) a.spliterator(), (Spliterator<T>) b.spliterator()), a.isParallel() || b.isParallel());
     }
@@ -228,7 +227,6 @@ public class StandardHStream<T> implements StandardBaseHStream<T, StandardHStrea
     public static <T> StandardHStream<T> of(Receiver.Void<Stream<T>> streamReceiver, boolean isParallel) { return new StandardHStream<>(streamReceiver.asSupplier(), isParallel); }
     public static <T> StandardHStream<T> of(Receiver.Void<Stream<T>> streamReceiver) { return new StandardHStream<>(streamReceiver.asSupplier(), false); }
     public static <T> StandardHStream<T> iterate(final T seed, final UnaryOperator<T> f) { return new StandardHStream<>(seed, f); }
-    public static <T> StandardHStream<T> iterate(T seed, Predicate<? super T> hasNext, UnaryOperator<T> next) { return new StandardHStream<>(seed, hasNext, next); }
     public static <T> StandardHStream<T> concat(StandardHStream<? extends T> a, StandardHStream<? extends T> b) { return new StandardHStream<>(a, b); }
 
     abstract static class ConcatSpliterator<T, T_SPLITR extends Spliterator<T>> implements Spliterator<T> {

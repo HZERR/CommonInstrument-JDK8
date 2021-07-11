@@ -37,7 +37,6 @@ public class HStream<T> implements BaseHStream<T, HStream<T>>, Functions<T>, Clo
     private HStream(Iterable<T> iterable, boolean isParallel) { this.value = () -> StreamSupport.stream(iterable.spliterator(), isParallel); }
     private HStream(Iterator<T> iterator, boolean isParallel) { this.value = () -> StreamSupport.stream(((Iterable<T>) (() -> iterator)).spliterator(), isParallel); }
     private HStream(T seed, UnaryOperator<T> f) { this.value = () -> Stream.iterate(seed, f); }
-    private HStream(T seed, java.util.function.Predicate<? super T> hasNext, UnaryOperator<T> next) { this.value = () -> Stream.iterate(seed, hasNext, next); }
     private HStream(HStream<? extends T> a, HStream<? extends T> b) {
         this.value = () -> StreamSupport.stream(new ConcatSpliterator.OfRef<>((Spliterator<T>) a.spliterator(), (Spliterator<T>) b.spliterator()), a.isParallel() || b.isParallel());
     }
@@ -391,7 +390,6 @@ public class HStream<T> implements BaseHStream<T, HStream<T>>, Functions<T>, Clo
     public static <T> HStream<T> of(Receiver.Void<Stream<T>> streamReceiver, boolean isParallel) { return new HStream<>(Receiver.Void.convert(streamReceiver), null, isParallel); }
     public static <T> HStream<T> of(Receiver.Void<Stream<T>> streamReceiver) { return new HStream<>(Receiver.Void.convert(streamReceiver), null, false); }
     public static <T> HStream<T> iterate(final T seed, final UnaryOperator<T> f) { return new HStream<>(seed, f); }
-    public static <T> HStream<T> iterate(T seed, java.util.function.Predicate<? super T> hasNext, UnaryOperator<T> next) { return new HStream<>(seed, hasNext, next); }
     public static <T> HStream<T> concat(HStream<? extends T> a, HStream<? extends T> b) { return new HStream<>(a, b); }
 
     abstract static class ConcatSpliterator<T, T_SPLITR extends Spliterator<T>> implements Spliterator<T> {

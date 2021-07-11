@@ -24,16 +24,6 @@ repositories {
     mavenCentral()
 }
 
-tasks.withType(JavaCompile) {
-    options.compilerArgs += "--enable-preview"
-}
-tasks.withType(Test) {
-    jvmArgs += "--enable-preview"
-}
-tasks.withType(JavaExec) {
-    jvmArgs += "--enable-preview"
-}
-
 dependencies {
     implementation "org.apache.commons:commons-lang3:3.12.0"
     implementation "org.jetbrains:annotations:20.1.0"
@@ -43,7 +33,7 @@ dependencies {
 
 shadowJar {
     archiveBaseName.set('common-instrument')
-    archiveVersion.set('1.2.5')
+    archiveVersion.set('1.2.6')
     archiveClassifier.set('all')
     getDestinationDirectory().set(new File("${projectDir}/build"))
 }
