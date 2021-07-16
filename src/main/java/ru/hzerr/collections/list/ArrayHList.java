@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -30,17 +31,26 @@ public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
     }
 
     @Override
-    public void changeIf(UnaryOperator<E> changer, Predicate<E> condition) {
-        for (int i = 0; i < size(); i++) {
-            E element = get(i);
+    public void changeIf(Predicate<? super E> condition, Consumer<? super E> changer) {
+        for (E element : this) {
             if (condition.test(element)) {
-                this.set(i, changer.apply(element));
+                changer.accept(element);
             }
         }
     }
 
     @Override
-    public Optional<E> find(Predicate<E> predicate) {
+    public void replaceIf(Predicate<? super E> condition, UnaryOperator<E> replacer) {
+        for (int i = 0; i < size(); i++) {
+            E element = get(i);
+            if (condition.test(element)) {
+                this.set(i, replacer.apply(element));
+            }
+        }
+    }
+
+    @Override
+    public Optional<E> find(Predicate<? super E> predicate) {
         for (E element: this) {
             if (predicate.test(element)) return Optional.of(element);
         }
@@ -49,7 +59,7 @@ public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
     }
 
     @Override
-    public HList<E> findAll(Predicate<E> predicate) {
+    public HList<E> findAll(Predicate<? super E> predicate) {
         HList<E> values = new ArrayHList<>();
         for (E element: this) {
             if (predicate.test(element)) values.add(element);
@@ -62,10 +72,10 @@ public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
     public boolean noContains(E element) { return !contains(element); }
 
     @Override
-    public boolean noContains(Predicate<E> action) { return !contains(action); }
+    public boolean noContains(Predicate<? super E> action) { return !contains(action); }
 
     @Override
-    public boolean contains(Predicate<E> predicate) {
+    public boolean contains(Predicate<? super E> predicate) {
         //noinspection unchecked
         for (E element : (E[]) this.toArray()) {
             if (predicate.test(element)) {

@@ -1,9 +1,9 @@
 package ru.hzerr.collections.list;
 
+import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.function.UnaryOperator;
 
 public interface Changer<T> {
 
-    void changeIf(UnaryOperator<T> changer, Predicate<T> condition);
+    void changeIf(Predicate<? super T> condition, Consumer<? super T> changer);
 }
