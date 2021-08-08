@@ -523,6 +523,8 @@ public class HDirectory extends BaseDirectory {
         return new HDirectory(Files.createTempDirectory(parent.directory.toPath(), prefix, attributes));
     }
 
+    public static HDirectory from(File dir) { return new HDirectory(dir.toPath()); }
+
     private void checkExists(IFSObject... objects) {
         Objects.requireNonNull(objects, "Objects");
         for (IFSObject object : objects) {

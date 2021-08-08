@@ -1,5 +1,8 @@
 package ru.hzerr.util;
 
+import java.io.File;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Locale;
 
 public class SystemInfo {
@@ -8,15 +11,22 @@ public class SystemInfo {
     private static final String JAVA_VERSION = System.getProperty("java.version");
     private static final String OS_NAME = System.getProperty("os.name");
     private static final String OS_NAME_LCASE = OS_NAME.toLowerCase(Locale.ENGLISH);
-    private static final boolean IS_WINDOWS = OS_NAME_LCASE.contains("win");
-    private static final boolean IS_LINUX = OS_NAME_LCASE.contains("nux");
-    private static final boolean IS_MAC = OS_NAME_LCASE.contains("mac") || OS_NAME_LCASE.contains("darwin");
+    private static final String VERSION = System.getProperty("os.version");
+    private static final String JAVAFX_PLATFORM = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("javafx.platform"));
+    private static final boolean ANDROID = "android".equals(JAVAFX_PLATFORM) || "Dalvik".equals(System.getProperty("java.vm.name"));
+    private static final boolean WINDOWS = OS_NAME.startsWith("Windows");
+    private static final boolean WINDOWS_VISTA_OR_LATER = WINDOWS && versionNumberGreaterThanOrEqualTo(6.0f);
+    private static final boolean WINDOWS_7_OR_LATER = WINDOWS && versionNumberGreaterThanOrEqualTo(6.1f);
+    private static final boolean MAC = OS_NAME.startsWith("Mac");
+    private static final boolean LINUX = OS_NAME.startsWith("Linux") && !ANDROID;
+    private static final boolean SOLARIS = OS_NAME.startsWith("SunOS");
+    private static final boolean IOS = OS_NAME.startsWith("iOS");
 
     private SystemInfo() {
     }
 
     public static String getBit() {
-        boolean bl = IS_WINDOWS ? System.getenv("ProgramFiles(x86)") != null : System.getProperty("os.arch").contains("64");
+        boolean bl = WINDOWS ? System.getenv("ProgramFiles(x86)") != null : System.getProperty("os.arch").contains("64");
         return bl ? "64" : "32";
     }
 
@@ -36,8 +46,57 @@ public class SystemInfo {
     public static String getOsName() { return OS_NAME; }
     // return os name with lower case
     public static String getOsNameLCase() { return OS_NAME_LCASE; }
+    public static boolean isWindows() { return WINDOWS; }
+    public static boolean isWinVistaOrLater(){
+        return WINDOWS_VISTA_OR_LATER;
+    }
+    public static boolean isWin7OrLater(){
+        return WINDOWS_7_OR_LATER;
+    }
+    public static boolean isLinux() { return LINUX; }
+    public static boolean isMacOS() { return MAC; }
+    public static boolean isSolaris(){
+        return SOLARIS;
+    }
+    public static boolean isUnix(){
+        return LINUX || SOLARIS;
+    }
+    public static boolean isIOS(){
+        return IOS;
+    }
+    public static boolean isAndroid() {
+        return ANDROID;
+    }
 
-    public static boolean isWindows() { return IS_WINDOWS; }
-    public static boolean isLinux() { return IS_LINUX; }
-    public static boolean isMacOS() { return IS_MAC; }
+    public static String getCurrentJvm() {
+        return System.getProperty("java.home") +
+                File.separator +
+                "bin" +
+                File.separator +
+                "java" +
+                (isWindows() ? ".exe" : "");
+    }
+
+    public static String getCurrentJvmVersion() {
+        return "JDK "
+                + System.getProperty("java.version")
+                + ", VM "
+                + System.getProperty("java.vm.version");
+    }
+
+    public static String getCurrentOSVersion() {
+        return System.getProperty("os.name")
+                + ", "
+                + System.getProperty("os.arch")
+                + ", "
+                + System.getProperty("os.version");
+    }
+
+    private static boolean versionNumberGreaterThanOrEqualTo(float value) {
+        try {
+            return Float.parseFloat(VERSION) >= value;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }

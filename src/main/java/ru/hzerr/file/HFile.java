@@ -269,6 +269,8 @@ public class HFile extends BaseFile {
         return new HFile(Files.createTempFile(parent.directory.toPath(), suffix, prefix, attributes));
     }
 
+    public static HFile from(File file) { return new HFile(file.getPath()); }
+
     private boolean isHierarchicalChild0(BaseDirectory superParent) {
         BaseDirectory superDirectory = getParent();
         while (superDirectory != null) {
