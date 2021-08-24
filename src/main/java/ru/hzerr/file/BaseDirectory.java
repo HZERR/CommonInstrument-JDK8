@@ -9,6 +9,7 @@ import ru.hzerr.stream.HStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Paths;
 import java.util.function.Predicate;
 
 @SuppressWarnings({"unused", "unchecked"})
@@ -22,7 +23,7 @@ public abstract class BaseDirectory implements IFSObject {
     }
 
     public BaseDirectory(String parent, String child) {
-        this.directory = new File(parent, child);
+        this.directory = new File(Paths.get(parent).resolve(child).normalize().toString()); // fixed by HZERR
         if (directory.isFile()) throw new ValidationException(directory + " is a file");
     }
 
@@ -32,7 +33,7 @@ public abstract class BaseDirectory implements IFSObject {
     }
 
     public BaseDirectory(BaseDirectory parent, String child) {
-        this.directory = new File(parent.directory, child);
+        this.directory = new File(Paths.get(parent.getLocation()).resolve(child).normalize().toString()); // fixed by HZERR
         if (directory.isFile()) throw new ValidationException(directory + " is a file");
     }
 
@@ -61,8 +62,8 @@ public abstract class BaseDirectory implements IFSObject {
     public abstract boolean isNotEmpty();
     public abstract boolean hasOnlyFiles() throws IOException;
     public abstract boolean hasOnlyDirectories() throws IOException;
-    public abstract boolean isNotFoundInternalDirectories() throws IOException;
-    public abstract boolean isNotFoundInternalFiles() throws IOException;
+    public abstract boolean notFoundInternalDirectories() throws IOException;
+    public abstract boolean notFoundInternalFiles() throws IOException;
     public abstract boolean contains(IFSObject object, boolean recursive) throws IOException;
     public abstract FileStream find(Predicate<? super IFSObject> matcher) throws IOException;
     public abstract FileStream find(String glob) throws IOException;
@@ -73,7 +74,7 @@ public abstract class BaseDirectory implements IFSObject {
     public abstract HStream<BaseFile> findFiles(Predicate<? super BaseFile> matcher) throws IOException;
     public abstract <T extends BaseFile> HStream<T> findFiles(String glob) throws IOException;
     public abstract HStream<BaseFile> findFilesByNames(String... names) throws IOException;
-    public abstract boolean clean() throws IOException;
+    public abstract void clean() throws IOException;
 
     public abstract <T extends BaseDirectory> boolean deleteExcept(T... directories) throws IOException;
     public abstract <T extends BaseFile> boolean deleteExcept(T... files) throws IOException;

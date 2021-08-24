@@ -4,6 +4,7 @@ import org.apache.commons.io.FileUtils;
 import ru.hzerr.file.annotation.MaybeRecursive;
 import ru.hzerr.file.annotation.NotRecursive;
 import ru.hzerr.file.annotation.Recursive;
+import ru.hzerr.file.exception.ParentNotFoundException;
 import ru.hzerr.file.exception.directory.HDirectoryCreateImpossibleException;
 import ru.hzerr.file.exception.directory.HDirectoryIsNotDirectoryException;
 import ru.hzerr.file.exception.directory.NoSuchHDirectoryException;
@@ -12,6 +13,7 @@ import ru.hzerr.file.exception.file.HFileCreationFailedException;
 import ru.hzerr.file.exception.file.HFileIsNotFileException;
 import ru.hzerr.file.exception.file.NoSuchHFileException;
 import ru.hzerr.file.stream.FileStream;
+import ru.hzerr.file.stream.FileStreamBuilder;
 import ru.hzerr.stream.HStream;
 
 import java.io.File;
@@ -25,6 +27,8 @@ import java.nio.file.*;
 import java.nio.file.attribute.FileAttribute;
 import java.util.Objects;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @SuppressWarnings("unchecked")
 public class HDirectory extends BaseDirectory {
@@ -81,18 +85,22 @@ public class HDirectory extends BaseDirectory {
     @NotRecursive
     public HStream<BaseFile> getFiles() throws IOException {
         checkExists(this);
-        return HStream.of(Files.list(directory.toPath()).spliterator())
+        try(Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return HStream.of(pathStream.collect(Collectors.toList()))
                 .filter(this::isNotDirectory)
-                .map(HFile::new);
+                    .map(HFile::new);
+        }
     }
 
     @Override
     @NotRecursive
     public HStream<BaseDirectory> getDirectories() throws IOException {
         checkExists(this);
-        return HStream.of(Files.list(directory.toPath()).spliterator())
-                .filter(Files::isDirectory)
-                .map(HDirectory::new);
+        try(Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return HStream.of(pathStream.collect(Collectors.toList()))
+                    .filter(Files::isDirectory)
+                    .map(HDirectory::new);
+        }
     }
 
     @Override
@@ -101,8 +109,9 @@ public class HDirectory extends BaseDirectory {
         checkExists(this);
         if (recursive) {
             return FileStream.of(walk());
-        } else
-            return FileStream.of(Files.list(directory.toPath()).spliterator());
+        } else try (Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return FileStreamBuilder.newBuilder().add(pathStream.collect(Collectors.toList())).newStream();
+        }
     }
 
     @Override
@@ -110,9 +119,11 @@ public class HDirectory extends BaseDirectory {
     public HStream<BaseFile> getFiles(boolean recursive) throws IOException {
         checkExists(this);
         if (recursive) {
-            return HStream.of(Files.walk(directory.toPath()).spliterator())
-                    .filter(path -> this.isNotDirectory(path) && !path.equals(directory.toPath()))
-                    .map(HFile::new);
+            try (Stream<Path> pathStream = Files.walk(directory.toPath())) {
+                return HStream.of(pathStream.collect(Collectors.toList()))
+                        .filter(path -> isNotDirectory(path) && !path.equals(directory.toPath()))
+                        .map(HFile::new);
+            }
         } else
             return getFiles();
     }
@@ -122,9 +133,11 @@ public class HDirectory extends BaseDirectory {
     public HStream<BaseDirectory> getDirectories(boolean recursive) throws IOException {
         checkExists(this);
         if (recursive) {
-            return HStream.of(Files.walk(directory.toPath()).spliterator())
-                    .filter(path -> Files.isDirectory(path) && !path.equals(directory.toPath()))
-                    .map(HDirectory::new);
+            try (Stream<Path> pathStream = Files.walk(directory.toPath())) {
+                return HStream.of(pathStream.collect(Collectors.toList()))
+                        .filter(path -> Files.isDirectory(path) && !path.equals(directory.toPath()))
+                        .map(HDirectory::new);
+            }
         } else
             return getDirectories();
     }
@@ -184,7 +197,7 @@ public class HDirectory extends BaseDirectory {
         checkExists(this);
         final HStream<T> filesToBeExcluded = HStream.of(directoriesToBeExcluded);
         if (recursive) {
-            return HStream.of(Files.find(directory.toPath(), Integer.MAX_VALUE, (path, basicFileAttributes) -> {
+            try(Stream<Path> pathStream = Files.find(directory.toPath(), Integer.MAX_VALUE, (path, basicFileAttributes) -> {
                 if (Files.isDirectory(path)) {
                     HDirectory dir = new HDirectory(path);
                     return filesToBeExcluded.allMatch(excludedDir -> {
@@ -192,7 +205,9 @@ public class HDirectory extends BaseDirectory {
                     });
                 } else
                     return false;
-            }).spliterator()).map(HDirectory::new);
+            })) {
+                return HStream.of(pathStream.collect(Collectors.toList())).map(HDirectory::new);
+            }
         } else
             return this.getDirectoriesExcept(directoriesToBeExcluded);
     }
@@ -243,8 +258,8 @@ public class HDirectory extends BaseDirectory {
                 Path path = paths.iterator().next();
                 if (this.isNotDirectory(path)) {
                     fileCount = fileCount + 1;
-                }
-
+                } else
+                    return false;
             }
 
             return fileCount > 0;
@@ -260,7 +275,8 @@ public class HDirectory extends BaseDirectory {
                 Path path = paths.iterator().next();
                 if (Files.isDirectory(path)) {
                     dirCount = dirCount + 1;
-                }
+                } else
+                    return false;
             }
 
             return dirCount > 0;
@@ -268,13 +284,13 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
-    public boolean isNotFoundInternalDirectories() throws IOException {
+    public boolean notFoundInternalDirectories() throws IOException {
         checkExists(this);
         return this.getDirectories().count() == 0;
     }
 
     @Override
-    public boolean isNotFoundInternalFiles() throws IOException {
+    public boolean notFoundInternalFiles() throws IOException {
         checkExists(this);
         return this.getFiles().count() == 0;
     }
@@ -298,9 +314,11 @@ public class HDirectory extends BaseDirectory {
         if (glob.equals("*"))
             return this.getAllFiles(true);
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + glob);
-        return FileStream.of(Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
+        try (Stream<Path> pathStream = Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
             return matcher.matches(path);
-        })));
+        }))) {
+            return FileStreamBuilder.newBuilder().add(pathStream.collect(Collectors.toList())).newStream();
+        }
     }
 
     /**
@@ -327,9 +345,11 @@ public class HDirectory extends BaseDirectory {
         if (glob.equals("*"))
             return this.getDirectories(true);
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + glob);
-        return HStream.of(Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
+        try (Stream<Path> pathStream = Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
             return Files.isDirectory(path) && matcher.matches(path);
-        })).spliterator()).map(HDirectory::new);
+        }))) {
+            return HStream.of(pathStream.collect(Collectors.toList())).map(HDirectory::new);
+        }
     }
 
     @Override
@@ -352,9 +372,11 @@ public class HDirectory extends BaseDirectory {
         if (glob.equals("*"))
             return this.getFiles(true);
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + glob);
-        return HStream.of(Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
+        try (Stream<Path> pathStream = Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
             return this.isNotDirectory(path) && matcher.matches(path);
-        })).spliterator()).map(HFile::new);
+        }))) {
+            return HStream.of(pathStream.collect(Collectors.toList())).map(HFile::new);
+        }
     }
 
     /**
@@ -374,16 +396,20 @@ public class HDirectory extends BaseDirectory {
     @Override
     public boolean notExists() { return !this.directory.exists(); }
     @Override
-    public HDirectory getParent() { return new HDirectory(directory.getAbsoluteFile().getParent()); }
+    public HDirectory getParent() throws ParentNotFoundException {
+        if (directory.getAbsoluteFile().getParent() != null) {
+            return new HDirectory(directory.getAbsoluteFile().getParent());
+        } else
+            throw new ParentNotFoundException("The " + directory.getAbsolutePath() + " directory does not have a parent");
+    }
 
     /**
      * Очищает полностью директорию без удаления текущего каталога
      */
     @Override
-    public boolean clean() throws IOException {
+    public void clean() throws IOException {
         checkExists(this);
         FileUtils.cleanDirectory(directory);
-        return getAllFiles(false).count() == 0;
     }
 
     /**
@@ -466,9 +492,7 @@ public class HDirectory extends BaseDirectory {
     @Override
     public <T extends BaseDirectory> boolean isHierarchicalChild(T superParent) {
         checkExists(this, superParent);
-        try {
-            return isHierarchicalChild0(superParent);
-        } catch (NullPointerException npe) { return false; }
+        return isHierarchicalChild0(superParent);
     }
 
     @Override
@@ -493,14 +517,26 @@ public class HDirectory extends BaseDirectory {
     }
 
     public <T extends BaseDirectory> void moveContentToDirectory(T directory) throws IOException {
+        this.moveContentToDirectory(directory, false);
+    }
+
+    public <T extends BaseDirectory> void moveContentToDirectory(T directory, boolean shouldDeleteDirToBeMoved) throws IOException {
         checkExists(this, directory);
-        FileUtils.moveDirectory(this.directory, directory.directory);
+        FileUtils.copyDirectory(this.directory, directory.directory);
+        if (shouldDeleteDirToBeMoved) {
+            delete();
+        } else
+            clean();
     }
 
     public double sizeOf(SizeType type) {
+        return sizeOfAsBigDecimal(type).doubleValue();
+    }
+
+    public BigDecimal sizeOfAsBigDecimal(SizeType type) {
         checkExists(this);
         BigDecimal size = new BigDecimal(FileUtils.sizeOfDirectoryAsBigInteger(directory));
-        return SizeType.BYTE.to(type, size).setScale(1, RoundingMode.DOWN).doubleValue();
+        return SizeType.BYTE.to(type, size).setScale(1, RoundingMode.DOWN);
     }
 
     @Override
@@ -541,17 +577,19 @@ public class HDirectory extends BaseDirectory {
     private boolean isNotDirectory(Path path) { return !Files.isDirectory(path); }
 
     private HStream<Path> walk() throws IOException {
-        return HStream.of(Files.walk(directory.toPath()).spliterator())
-                .filter(path -> !asPath().equals(path));
+        try (Stream<Path> pathStream = Files.walk(directory.toPath())) {
+            return HStream.of(pathStream.collect(Collectors.toList()))
+                    .filter(path -> !asPath().equals(path));
+        }
     }
 
     private boolean isHierarchicalChild0(BaseDirectory superParent) {
         if (this.directory.equals(superParent.directory)) return true;
-        BaseDirectory supDirectory = getParent();
+        File supDirectory = directory.getAbsoluteFile().getParentFile();
         while (supDirectory != null) {
-            if (supDirectory.directory.equals(superParent.directory)) {
+            if (supDirectory.equals(superParent.directory)) {
                 return true;
-            } else supDirectory = supDirectory.getParent();
+            } else supDirectory = directory.getAbsoluteFile().getParentFile();
         }
 
         return false;

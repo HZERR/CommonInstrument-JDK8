@@ -9,6 +9,7 @@ import ru.hzerr.stream.HStream;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
 
 public class FileStreamBuilder {
 
@@ -22,6 +23,16 @@ public class FileStreamBuilder {
     public FileStreamBuilder add(HFile... files) { this.files.setAll(files); return this; }
     public FileStreamBuilder add(Path... paths) {
         for (Path path: paths) {
+            if (Files.isDirectory(path)) {
+                directories.add(new HDirectory(path.toString()));
+            } else
+                files.add(new HFile(path.toString()));
+        }
+
+        return this;
+    }
+    public FileStreamBuilder add(Collection<Path> collection) {
+        for (Path path: collection) {
             if (Files.isDirectory(path)) {
                 directories.add(new HDirectory(path.toString()));
             } else

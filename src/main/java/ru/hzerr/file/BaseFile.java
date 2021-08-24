@@ -12,6 +12,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.nio.file.Paths;
 import java.util.Collection;
 
 public abstract class BaseFile implements IFSObject {
@@ -24,12 +25,12 @@ public abstract class BaseFile implements IFSObject {
     }
 
     public BaseFile(String parent, String child) {
-        this.file = new File(parent, child);
+        this.file = new File(Paths.get(parent).resolve(child).normalize().toString());
         if (file.isDirectory()) throw new ValidationException(file + " is a directory");
     }
 
     public BaseFile(BaseDirectory parent, String child) {
-        this.file = new File(parent.directory, child);
+        this.file = new File(Paths.get(parent.getLocation()).resolve(child).normalize().toString());
         if (file.isDirectory()) throw new ValidationException(file + " is a directory");
     }
 

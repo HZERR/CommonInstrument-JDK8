@@ -2,6 +2,7 @@ package ru.hzerr.file;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import ru.hzerr.file.exception.ParentNotFoundException;
 import ru.hzerr.file.exception.directory.NoSuchHDirectoryException;
 import ru.hzerr.file.exception.file.*;
 import ru.hzerr.stream.HStream;
@@ -13,6 +14,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
@@ -87,13 +89,17 @@ public class HFile extends BaseFile {
     @Override
     public void deleteOnExit() { this.file.deleteOnExit(); }
 
+    /**
+     * @see java.nio.file.Files#move(Path, Path, CopyOption...)
+     */
     @Override
-    public void rename(String fullName) throws HFileRenameFailedException {
+    public void rename(String fileName) throws HFileRenameFailedException {
         checkExists(this);
-        File dest = new File(getParent().getLocation().concat(fullName));
-        if (dest.exists()) throw new HFileRenameFailedException("File " + dest.getAbsolutePath() + " is already exists");
-        if (!file.renameTo(dest)) {
-            throw new HFileRenameFailedException("File " + this.getLocation() + " has not been renamed");
+        final Path src = this.asPath();
+        try {
+            Files.move(src, src.resolveSibling(fileName));
+        } catch (IOException io) {
+            throw new HFileRenameFailedException(io, "File " + this.getLocation() + " has not been renamed");
         }
     }
 
@@ -132,17 +138,19 @@ public class HFile extends BaseFile {
 
     @Override
     @SuppressWarnings("unchecked")
-    public HDirectory getParent() {
+    public HDirectory getParent() throws ParentNotFoundException {
         checkExists(this);
-        return new HDirectory(file.getAbsoluteFile().getParent());
+        if (file.getAbsoluteFile().getParent() != null) {
+            return new HDirectory(file.getAbsoluteFile().getParent());
+        } else
+            throw new ParentNotFoundException("The " + file.getAbsolutePath() + " file does not have a parent");
+
     }
 
     @Override
     public <T extends BaseDirectory> boolean isHierarchicalChild(T superParent) {
         checkExists(this, superParent);
-        try {
-            return isHierarchicalChild0(superParent);
-        } catch (NullPointerException npe) { return false; }
+        return isHierarchicalChild0(superParent);
     }
 
     @Override
@@ -201,7 +209,7 @@ public class HFile extends BaseFile {
     public long checksum() throws HFileReadException {
         checkExists(this);
         try {
-            return FileUtils.checksumCRC32(this.file);
+            return FileUtils.checksumCRC32(file);
         } catch (IOException io) { throw new HFileReadException(io, "The checksum can't be received"); }
     }
 
@@ -216,18 +224,23 @@ public class HFile extends BaseFile {
     }
 
     public OutputStream openOutputStream() throws IOException {
-        checkExists(this);
         return openOutputStream(false);
     }
 
     public OutputStream openOutputStream(boolean append) throws IOException {
+        checkExists(this);
         return FileUtils.openOutputStream(file, append);
     }
 
     public double sizeOf(SizeType type) {
+        return sizeOfAsBigDecimal(type).doubleValue();
+    }
+
+    @Override
+    public BigDecimal sizeOfAsBigDecimal(SizeType type) {
         checkExists(this);
         BigDecimal size = new BigDecimal(FileUtils.sizeOfAsBigInteger(file));
-        return SizeType.BYTE.to(type, size).setScale(1, RoundingMode.DOWN).doubleValue();
+        return SizeType.BYTE.to(type, size).setScale(1, RoundingMode.DOWN);
     }
 
     @Override
@@ -272,11 +285,11 @@ public class HFile extends BaseFile {
     public static HFile from(File file) { return new HFile(file.getPath()); }
 
     private boolean isHierarchicalChild0(BaseDirectory superParent) {
-        BaseDirectory superDirectory = getParent();
-        while (superDirectory != null) {
-            if (superDirectory.directory.equals(superParent.directory)) {
+        File parent = file.getAbsoluteFile().getParentFile();
+        while (parent != null) {
+            if (parent.equals(superParent.directory)) {
                 return true;
-            } else superDirectory = superDirectory.getParent();
+            } else parent = file.getAbsoluteFile().getParentFile();
         }
 
         return false;

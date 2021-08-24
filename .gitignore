@@ -6,3 +6,4 @@ build/libs
 build/tmp
 src/test
 settings.gradle
+out
