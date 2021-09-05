@@ -3,9 +3,10 @@ package ru.hzerr.file;
 import ru.hzerr.file.exception.ParentNotFoundException;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.math.BigDecimal;
 
-public interface IFSObject extends IBackwardCompatibility, IObject {
+public interface IFSObject extends IBackwardCompatibility, IObject, Serializable {
 
     String getName();
     String getLocation();
