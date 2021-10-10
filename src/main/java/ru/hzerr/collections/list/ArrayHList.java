@@ -103,6 +103,16 @@ public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
     }
 
     @Override
+    public E firstElement() {
+        return get(0);
+    }
+
+    @Override
+    public E lastElement() {
+        return get(size() - 1);
+    }
+
+    @Override
     @SuppressWarnings("unchecked")
     public HStream<E> toHStream() { return HStream.of((E[]) this.toArray()); }
 

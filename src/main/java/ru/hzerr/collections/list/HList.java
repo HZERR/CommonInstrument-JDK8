@@ -17,5 +17,8 @@ public interface HList<E> extends List<E>,
     @SuppressWarnings("unchecked")
     void setAll(E... elements);
 
+    E firstElement();
+    E lastElement();
+
     HStream<E> toHStream();
 }
