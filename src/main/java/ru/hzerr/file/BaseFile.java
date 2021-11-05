@@ -4,6 +4,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import ru.hzerr.file.exception.ValidationException;
 import ru.hzerr.file.exception.file.HFileRenameFailedException;
+import ru.hzerr.file.exception.file.HFileWriteException;
 import ru.hzerr.stream.BaseHStream;
 
 import java.io.File;
@@ -12,6 +13,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.nio.file.CopyOption;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 
@@ -47,6 +50,10 @@ public abstract class BaseFile implements IFSObject {
     public abstract <T extends BaseFile> boolean equalsBaseName(T file);
     public abstract <T extends BaseFile> boolean notEqualsExtension(T file);
     public abstract <T extends BaseFile> boolean notEqualsBaseName(T file);
+
+    /**
+     * @see java.nio.file.Files#move(Path, Path, CopyOption...)
+     */
     public abstract void rename(String fullName) throws HFileRenameFailedException;
     public abstract void rename(String name, String extension) throws HFileRenameFailedException;
     public abstract <T extends BaseFile> void copyToFile(T file) throws IOException;
@@ -55,6 +62,18 @@ public abstract class BaseFile implements IFSObject {
     public abstract <T extends BaseDirectory> void moveToDirectory(T directory) throws IOException;
     public abstract byte[] readToByteArray() throws IOException;
     public abstract BaseHStream<String, ?> readLines(Charset charset) throws IOException;
+
+    /**
+     * Writes the <code>toString()</code> value of each item in a collection to
+     * the specified <code>File</code> line by line.
+     * The default VM encoding and the default line ending will be used.
+     *
+     * @param lines  the lines to write, {@code null} entries produce blank lines
+     * @param append if {@code true}, then the lines will be added to the
+     *               end of the file rather than overwriting
+     * @throws HFileWriteException in case of a writing error
+     * @since 2.1
+     */
     public abstract void writeLines(Collection<String> lines, boolean append) throws IOException;
     public abstract void writeLines(Collection<String> lines) throws IOException;
     public abstract void writeLines(String... lines) throws IOException;

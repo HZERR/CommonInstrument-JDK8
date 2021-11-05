@@ -11,7 +11,8 @@ import java.util.function.Supplier;
  * @author HZERR
  * @param <T> the type of value
  */
-@SuppressWarnings({"unused", "ClassCanBeRecord"})
+@SuppressWarnings({"unused"})
+@Deprecated
 public class HOptional<T> {
 
     private static final HOptional<?> EMPTY = new HOptional<>(null);

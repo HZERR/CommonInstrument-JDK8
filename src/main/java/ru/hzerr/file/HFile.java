@@ -14,7 +14,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
@@ -89,9 +88,6 @@ public class HFile extends BaseFile {
     @Override
     public void deleteOnExit() { this.file.deleteOnExit(); }
 
-    /**
-     * @see java.nio.file.Files#move(Path, Path, CopyOption...)
-     */
     @Override
     public void rename(String fileName) throws HFileRenameFailedException {
         checkExists(this);
@@ -186,17 +182,6 @@ public class HFile extends BaseFile {
 
     public void writeLines(Collection<String> lines) throws HFileWriteException { writeLines(lines, false); }
 
-    /**
-     * Writes the <code>toString()</code> value of each item in a collection to
-     * the specified <code>File</code> line by line.
-     * The default VM encoding and the default line ending will be used.
-     *
-     * @param lines  the lines to write, {@code null} entries produce blank lines
-     * @param append if {@code true}, then the lines will be added to the
-     *               end of the file rather than overwriting
-     * @throws HFileWriteException in case of a writing error
-     * @since 2.1
-     */
     public void writeLines(Collection<String> lines, boolean append) throws HFileWriteException {
         checkExists(this);
         try {

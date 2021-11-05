@@ -10,9 +10,8 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.UnaryOperator;
 
-public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
+public final class ArrayHList<E> extends ArrayList<E> implements HList<E> {
 
     public ArrayHList() { super(); }
     public ArrayHList(int initialCapacity) { super(initialCapacity); }
@@ -40,11 +39,11 @@ public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
     }
 
     @Override
-    public void replaceIf(Predicate<? super E> condition, UnaryOperator<E> replacer) {
+    public void replaceIf(Predicate<? super E> condition, E replacement) {
         for (int i = 0; i < size(); i++) {
             E element = get(i);
             if (condition.test(element)) {
-                this.set(i, replacer.apply(element));
+                set(i, replacement);
             }
         }
     }
@@ -89,7 +88,7 @@ public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
     @Override
     @SafeVarargs
     @SuppressWarnings("ManualArrayToCollectionCopy")
-    public final void add(E... elements) {
+    public final void addAll(E... elements) {
         for (E element : elements) {
             super.add(element);
         }
@@ -99,7 +98,7 @@ public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
     @SafeVarargs
     public final void setAll(E... elements) {
         clear();
-        add(elements);
+        addAll(elements);
     }
 
     @Override

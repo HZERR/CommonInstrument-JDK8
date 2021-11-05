@@ -94,7 +94,7 @@ public class HashHMap<K, V> extends HashMap<K, V> implements HMap<K, V> {
     }
 
     @Override
-    public <R> R getKIf(@NotNull Function<? super K, R> function, @NotNull Predicate<R> predicate) {
+    public <R> R getStateKeyIf(@NotNull Function<? super K, R> function, @NotNull Predicate<R> predicate) {
         for (K k: keySet()) {
             R r = function.apply(k);
             if (predicate.test(r)) {
@@ -106,7 +106,7 @@ public class HashHMap<K, V> extends HashMap<K, V> implements HMap<K, V> {
     }
 
     @Override
-    public <R> R getKIf(@NotNull Predicate<K> predicate, @NotNull Function<? super K, R> function) {
+    public <R> R getStateKeyIf(@NotNull Predicate<K> predicate, @NotNull Function<? super K, R> function) {
         for (K k: keySet()) {
             if (predicate.test(k)) {
                 return function.apply(k);
@@ -117,7 +117,7 @@ public class HashHMap<K, V> extends HashMap<K, V> implements HMap<K, V> {
     }
 
     @Override
-    public <R> R getVIf(@NotNull Function<? super V, R> function, @NotNull Predicate<R> predicate) {
+    public <R> R getStateValueIf(@NotNull Function<? super V, R> function, @NotNull Predicate<R> predicate) {
         for (V v: values()) {
             R r = function.apply(v);
             if (predicate.test(r)) {
@@ -129,7 +129,7 @@ public class HashHMap<K, V> extends HashMap<K, V> implements HMap<K, V> {
     }
 
     @Override
-    public <R> R getVIf(@NotNull Predicate<V> predicate, @NotNull Function<? super V, R> function) {
+    public <R> R getStateValueIf(@NotNull Predicate<V> predicate, @NotNull Function<? super V, R> function) {
         for (V v: values()) {
             if (predicate.test(v)) {
                 return function.apply(v);

@@ -30,7 +30,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@SuppressWarnings("unchecked")
+@SuppressWarnings({"unchecked", "CodeBlock2Expr"})
 public class HDirectory extends BaseDirectory {
 
     public HDirectory(URI uri) { super(uri); }
@@ -150,10 +150,6 @@ public class HDirectory extends BaseDirectory {
         return this.getFiles().filter(file -> excluded.noneMatch(file::equals));
     }
 
-    /**
-     * Пример входящих аргументов: java.exe, build.gradle
-     * Не используйте имена без расширения файла
-     */
     @Override
     @NotRecursive
     public <T extends BaseFile> HStream<BaseFile> getFilesExcept(String... fileNames) throws IOException {
@@ -212,13 +208,6 @@ public class HDirectory extends BaseDirectory {
             return this.getDirectoriesExcept(directoriesToBeExcluded);
     }
 
-    /**
-     * Возвращает список всех файлов текущего каталога, кроме тех, которые должны быть исключены
-     * @param filesToBeExcluded файлы, которые должны быть исключены
-     * @param recursive использовать все внутренние файлы для перебора или нет
-     * @return FileStream файлы, содержащиеся в текущем каталоге, кроме тех, которые были исключены
-     * @throws IOException в случае ошибки ввода-вывода
-     */
     @Override
     @MaybeRecursive
     public FileStream getAllFilesExcept(FileStream filesToBeExcluded, boolean recursive) throws IOException {
@@ -321,10 +310,6 @@ public class HDirectory extends BaseDirectory {
         }
     }
 
-    /**
-     * Пример входящих аргументов метода: "java", "config", "persons"</br>
-     * Не используйте имена с расширением файла
-     */
     @Override
     public FileStream findByNames(String... names) throws IOException {
         checkExists(this);
@@ -379,10 +364,6 @@ public class HDirectory extends BaseDirectory {
         }
     }
 
-    /**
-     * Пример входящих аргументов метода: "java", "config", "persons"</br>
-     * Не используйте имена с расширением файла
-     */
     @Override
     public HStream<BaseFile> findFilesByNames(String... names) throws IOException {
         checkExists(this);
@@ -403,9 +384,6 @@ public class HDirectory extends BaseDirectory {
             throw new ParentNotFoundException("The " + directory.getAbsolutePath() + " directory does not have a parent");
     }
 
-    /**
-     * Очищает полностью директорию без удаления текущего каталога
-     */
     @Override
     public void clean() throws IOException {
         checkExists(this);
