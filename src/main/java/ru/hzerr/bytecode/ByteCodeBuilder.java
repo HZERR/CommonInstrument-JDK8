@@ -2,6 +2,7 @@ package ru.hzerr.bytecode;
 
 import javassist.CtClass;
 
+// TODO: 06.11.2021 REWRITE ALL 
 public abstract class ByteCodeBuilder {
 
     CtClass reference;

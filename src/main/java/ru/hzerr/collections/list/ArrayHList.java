@@ -49,6 +49,16 @@ public final class ArrayHList<E> extends ArrayList<E> implements HList<E> {
     }
 
     @Override
+    public void replaceIf(Predicate<? super E> condition, Function<? super E, E> replacer) {
+        for (int i = 0; i < size(); i++) {
+            E element = get(i);
+            if (condition.test(element)) {
+                set(i, replacer.apply(element));
+            }
+        }
+    }
+
+    @Override
     public Optional<E> find(Predicate<? super E> predicate) {
         for (E element: this) {
             if (predicate.test(element)) return Optional.of(element);

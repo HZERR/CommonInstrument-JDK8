@@ -1,5 +1,6 @@
 package ru.hzerr.collections.list;
 
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 public interface Replacer<T> {
@@ -9,4 +10,5 @@ public interface Replacer<T> {
      * @param condition condition to check the elements of the collection
      */
     void replaceIf(Predicate<? super T> condition, T replacement);
+    void replaceIf(Predicate<? super T> condition, Function<? super T, T> replacer);
 }
