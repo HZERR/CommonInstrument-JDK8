@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 
 public final class ArrayHList<E> extends ArrayList<E> implements HList<E> {
 
@@ -49,7 +50,7 @@ public final class ArrayHList<E> extends ArrayList<E> implements HList<E> {
     }
 
     @Override
-    public void replaceIf(Predicate<? super E> condition, Function<? super E, E> replacer) {
+    public void replaceIf(Predicate<? super E> condition, UnaryOperator<E> replacer) {
         for (int i = 0; i < size(); i++) {
             E element = get(i);
             if (condition.test(element)) {
