@@ -20,10 +20,8 @@ public final class ArrayHList<E> extends ArrayList<E> implements HList<E> {
 
     @Override
     public <R> HList<R> map(Function<? super E, ? extends R> mapper) {
-        //noinspection unchecked
-        E[] elements = (E[]) toArray();
         HList<R> list = new ArrayHList<>();
-        for (E element : elements) {
+        for (E element : this) {
             list.add(mapper.apply(element));
         }
 
@@ -59,6 +57,9 @@ public final class ArrayHList<E> extends ArrayList<E> implements HList<E> {
         }
     }
 
+    /**
+     * @throws NullPointerException if the successfully tested element is null
+     */
     @Override
     public Optional<E> find(Predicate<? super E> predicate) {
         for (E element: this) {
@@ -86,8 +87,7 @@ public final class ArrayHList<E> extends ArrayList<E> implements HList<E> {
 
     @Override
     public boolean contains(Predicate<? super E> predicate) {
-        //noinspection unchecked
-        for (E element : (E[]) this.toArray()) {
+        for (E element : this) {
             if (predicate.test(element)) {
                 return true;
             }
