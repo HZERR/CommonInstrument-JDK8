@@ -5,9 +5,7 @@ import ru.hzerr.file.annotation.MaybeRecursive;
 import ru.hzerr.file.annotation.NotRecursive;
 import ru.hzerr.file.annotation.Recursive;
 import ru.hzerr.file.exception.ParentNotFoundException;
-import ru.hzerr.file.exception.directory.HDirectoryCreateImpossibleException;
-import ru.hzerr.file.exception.directory.HDirectoryIsNotDirectoryException;
-import ru.hzerr.file.exception.directory.NoSuchHDirectoryException;
+import ru.hzerr.file.exception.directory.*;
 import ru.hzerr.file.exception.file.HFileCreateImpossibleException;
 import ru.hzerr.file.exception.file.HFileCreationFailedException;
 import ru.hzerr.file.exception.file.HFileIsNotFileException;
@@ -80,6 +78,20 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     public BaseFile getSubFile(String fileName) { return new HFile(this, fileName); }
+
+    @Override
+    public void rename(String fullName) throws HDirectoryRenameFailedException, HDirectoryRenameImpossibleException {
+        if (directory.getAbsoluteFile().getParent() != null) {
+            File dir = new File(Paths.get(directory.getAbsoluteFile().getParent()).resolve(fullName).normalize().toString());
+            try {
+                FileUtils.copyDirectory(directory, dir);
+                delete();
+                directory = dir;
+            } catch (IOException io) {
+                throw new HDirectoryRenameFailedException(io, "Directory " + this.getLocation() + " has not been renamed");
+            }
+        } else throw new HDirectoryRenameImpossibleException("The directory does not have a parent directory");
+    }
 
     @Override
     @NotRecursive

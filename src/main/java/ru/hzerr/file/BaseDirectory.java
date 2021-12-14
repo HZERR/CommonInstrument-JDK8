@@ -6,6 +6,8 @@ import ru.hzerr.file.annotation.MaybeRecursive;
 import ru.hzerr.file.annotation.NotRecursive;
 import ru.hzerr.file.annotation.Recursive;
 import ru.hzerr.file.exception.ValidationException;
+import ru.hzerr.file.exception.directory.HDirectoryRenameFailedException;
+import ru.hzerr.file.exception.directory.HDirectoryRenameImpossibleException;
 import ru.hzerr.file.stream.FileStream;
 import ru.hzerr.stream.HStream;
 
@@ -46,6 +48,8 @@ public abstract class BaseDirectory implements IFSObject {
     public abstract <T extends BaseFile> T createSubFile(String fileName) throws IOException;
     public abstract <T extends BaseDirectory> T getSubDirectory(String dirName);
     public abstract <T extends BaseFile> T getSubFile(String fileName);
+
+    public abstract void rename(String fullName) throws HDirectoryRenameFailedException, HDirectoryRenameImpossibleException;
 
     @NotRecursive
     public abstract HStream<BaseFile> getFiles() throws IOException;

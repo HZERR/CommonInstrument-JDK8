@@ -14,8 +14,10 @@ public interface IFSObject extends IBackwardCompatibility, IObject, Serializable
     boolean exists();
     boolean notExists();
     boolean delete() throws IOException;
+    void rename(String fileName) throws IOException;
     void deleteOnExit();
     <T extends BaseDirectory> T getParent() throws ParentNotFoundException;
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     <T extends BaseDirectory> boolean isHierarchicalChild(T superParent);
     <T extends BaseDirectory> boolean notIsHierarchicalChild(T superParent);
     double sizeOf(SizeType type);
