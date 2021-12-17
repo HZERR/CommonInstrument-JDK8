@@ -13,7 +13,7 @@ import java.util.stream.Stream;
  * @param <T> the type of value
  */
 @SuppressWarnings({"unused"})
-public class MayBe<T> {
+public final class MayBe<T> {
 
     private static final MayBe<?> EMPTY = new MayBe<>(null);
 

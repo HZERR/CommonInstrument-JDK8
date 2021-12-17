@@ -24,6 +24,7 @@ import java.net.URL;
 import java.nio.file.*;
 import java.nio.file.attribute.FileAttribute;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -507,7 +508,77 @@ public class HDirectory extends BaseDirectory {
     }
 
     public <T extends BaseDirectory> void moveContentToDirectory(T directory) throws IOException {
-        this.moveContentToDirectory(directory, false);
+        moveContentToDirectory(directory, false);
+    }
+
+    @Override
+    public boolean checkCountFiles(Integer count) throws IOException {
+        checkExists(this);
+        return walk().count() == count;
+    }
+
+    @Override
+    public boolean checkCountOnlyFiles(Integer count) throws IOException {
+        checkExists(this);
+        return walk().filter(Files::isDirectory).count() == count;
+    }
+
+    @Override
+    public boolean checkCountOnlyDirectories(Integer count) throws IOException {
+        checkExists(this);
+        return walk().filter(Files::isRegularFile).count() == count;
+    }
+
+    @Override
+    public boolean hasOnlyFile() throws IOException {
+        checkExists(this);
+        HStream<Path> stream = walk();
+        if (stream.count() == 1) {
+            Optional<Path> file = stream.findFirst();
+            return file.isPresent();
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean hasOnlyFile(String fileName) throws IOException {
+        checkExists(this);
+        HStream<Path> stream = walk();
+        if (stream.count() == 1) {
+            Optional<Path> file = stream.findFirst();
+            if (file.isPresent()) {
+                return file.get().endsWith(fileName);
+            }
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean hasOnlyDirectory() throws IOException {
+        checkExists(this);
+        HStream<Path> stream = walk();
+        if (stream.count() == 1) {
+            Optional<Path> file = stream.findFirst();
+            return file.isPresent();
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean hasOnlyDirectory(String directoryName) throws IOException {
+        checkExists(this);
+        HStream<Path> stream = walk();
+        if (stream.count() == 1) {
+            Optional<Path> file = stream.findFirst();
+            if (file.isPresent()) {
+                return file.get().endsWith(directoryName);
+            }
+        }
+
+        return false;
     }
 
     public <T extends BaseDirectory> void moveContentToDirectory(T directory, boolean shouldDeleteDirToBeMoved) throws IOException {

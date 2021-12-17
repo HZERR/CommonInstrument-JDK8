@@ -138,6 +138,14 @@ public abstract class BaseDirectory implements IFSObject {
     public abstract <T extends BaseDirectory>
     void moveContentToDirectory(T directory) throws IOException;
 
+    public abstract boolean checkCountFiles(Integer count) throws IOException;
+    public abstract boolean checkCountOnlyFiles(Integer count) throws IOException;
+    public abstract boolean checkCountOnlyDirectories(Integer count) throws IOException;
+    public abstract boolean hasOnlyFile() throws IOException;
+    public abstract boolean hasOnlyFile(String fileName) throws IOException;
+    public abstract boolean hasOnlyDirectory() throws IOException;
+    public abstract boolean hasOnlyDirectory(String directoryName) throws IOException;
+
     // END METHODS
 
     @Override
