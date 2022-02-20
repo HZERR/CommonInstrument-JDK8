@@ -244,7 +244,7 @@ public class HFile extends BaseFile {
     createTempFile(String fileName, FileAttribute<?>... attributes) throws IOException {
         return new HFile(Files.createTempFile(
                 FilenameUtils.getBaseName(fileName),
-                FilenameUtils.getExtension(fileName),
+                "." + FilenameUtils.getExtension(fileName),
                 attributes));
     }
 
@@ -253,18 +253,18 @@ public class HFile extends BaseFile {
         return new HFile(Files.createTempFile(
                 parent.directory.toPath(),
                 FilenameUtils.getBaseName(fileName),
-                FilenameUtils.getExtension(fileName),
+                "." + FilenameUtils.getExtension(fileName),
                 attributes));
     }
 
     public static HFile
-    createTempFile(String suffix, String prefix, FileAttribute<?>... attributes) throws IOException {
-        return new HFile(Files.createTempFile(suffix, prefix, attributes));
+    createTempFile(String prefix, String suffix, FileAttribute<?>... attributes) throws IOException {
+        return new HFile(Files.createTempFile(prefix, suffix.startsWith(".") ? suffix : suffix.substring(1), attributes));
     }
 
     public static HFile
-    createTempFile(HDirectory parent, String suffix, String prefix, FileAttribute<?>... attributes) throws IOException {
-        return new HFile(Files.createTempFile(parent.directory.toPath(), suffix, prefix, attributes));
+    createTempFile(HDirectory parent, String prefix, String suffix, FileAttribute<?>... attributes) throws IOException {
+        return new HFile(Files.createTempFile(parent.directory.toPath(), prefix, suffix.startsWith(".") ? suffix : suffix.substring(1), attributes));
     }
 
     public static HFile from(File file) { return new HFile(file.getPath()); }
