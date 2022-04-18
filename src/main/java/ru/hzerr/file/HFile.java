@@ -191,7 +191,7 @@ public class HFile extends BaseFile {
         try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(file.toPath())) {
             ByteBuffer bb = ByteBuffer.allocate(8192);
             channel.read(bb, 0);
-            return ArrayHList.create(new String(bb.array()).split("\n"));
+            return ArrayHList.create(charset.decode(bb).toString().split("\n"));
         }
 //        ForkJoinPool forkJoinPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
 //        FileReaderTask task = new FileReaderTask(file.toPath(), 0, 0);
