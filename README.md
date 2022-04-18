@@ -10,7 +10,6 @@ CommonInstrument
 
 ## Includes
 
-* HStream
 * HFile
 * HCollections
 * HByteCodeBuilder
