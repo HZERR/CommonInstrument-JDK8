@@ -1,7 +1,5 @@
 package ru.hzerr.collections.list;
 
-import ru.hzerr.stream.HStream;
-
 import java.util.Collection;
 import java.util.List;
 
@@ -9,6 +7,7 @@ public interface HList<E> extends List<E>,
         Finder<E>,
         Changer<E>,
         Replacer<E>,
+        Removable<E>,
         Contender<E>,
         Streamable<E> {
 
@@ -40,12 +39,6 @@ public interface HList<E> extends List<E>,
      * @return last element of the collection
      */
     E lastElement();
-
-    /**
-     * Converts the given collection to a stream
-     * @return new HStream
-     */
-    HStream<E> toHStream();
 
     /**
      * Creates an {@link ArrayHList}, adds elements to it and returns the collection

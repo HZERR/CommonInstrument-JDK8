@@ -41,6 +41,7 @@ public class SystemInfo {
     public static boolean isJava14() { return JAVA_VERSION.startsWith("14"); }
     public static boolean isJava15() { return JAVA_VERSION.startsWith("15"); }
     public static boolean isJava16() { return JAVA_VERSION.startsWith("16"); }
+    public static boolean isJava17() { return JAVA_VERSION.startsWith("17"); }
     public static boolean isJava8OrLower() { return JAVA_VERSION.charAt(0) == '1'; }
     public static boolean isJava9OrHigher() { return Character.getNumericValue(JAVA_VERSION.charAt(0)) >= 9; }
     public static String getOsName() { return OS_NAME; }

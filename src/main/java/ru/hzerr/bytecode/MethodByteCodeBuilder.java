@@ -1,98 +1,101 @@
 package ru.hzerr.bytecode;
 
+import javassist.CannotCompileException;
 import javassist.CtClass;
 import javassist.CtMethod;
+import javassist.NotFoundException;
 import ru.hzerr.collections.list.ArrayHList;
 import ru.hzerr.collections.list.HList;
-import ru.hzerr.stream.HStream;
-import ru.hzerr.stream.function.Predicate;
 
-import java.util.Arrays;
+import java.util.function.Predicate;
 
+@SuppressWarnings("CodeBlock2Expr")
 public class MethodByteCodeBuilder extends ByteCodeBuilder {
 
     private MethodByteCodeBuilder() {
     }
 
-    private HStream<CtMethod> methods;
+    private HList<CtMethod> methods;
     private final StringBuilder ACTION = new StringBuilder();
 
     public static MethodByteCodeBuilder init(CtMethod... methods) {
         MethodByteCodeBuilder builder = new MethodByteCodeBuilder();
-        builder.methods = HStream.of(methods);
+        builder.methods = HList.of(methods);
         return builder;
     }
 
     public static MethodByteCodeBuilder init(CtClass ctClass) {
         MethodByteCodeBuilder builder = new MethodByteCodeBuilder();
-        builder.methods = HStream.of(ctClass.getDeclaredMethods());
+        builder.methods = HList.of(ctClass.getDeclaredMethods());
         builder.reference = ctClass;
         return builder;
     }
 
     public MethodByteCodeBuilder filter(Predicate<? super CtMethod> predicate) {
-        methods.filter(predicate);
+        methods.removeIf(predicate);
         return this;
     }
 
     public MethodByteCodeBuilder filterByNames(String... names) {
-        HStream<String> namesHStream = HStream.of(names);
-        methods.filter(method -> namesHStream.anyMatch(name -> method.getName().equals(name)));
+        HList<String> namesList = HList.of(names);
+        methods.removeIf(method -> namesList.anyMatch(name -> method.getName().equals(name)));
         return this;
     }
 
-    public MethodByteCodeBuilder filterByParameters(String... classes) {
-//        methods.filter(method -> HStream.of(classes).allMatch(clazz -> method.getLongName().contains(clazz)));
-        HStream<CtClass> ctClassHStream = HStream.of(classes).map(
-                clazz -> Runtime.call(() ->
-                        ByteCodeBuilderFactory.getDefaultClassPoolSettings().getCtClass(clazz)));
-        methods.filter(method ->
-                ctClassHStream.allMatch(ctClass ->
-                        ArrayHList.create(Runtime.call(method::getParameterTypes)).contains(innerParameter -> innerParameter.getName().equals(ctClass.getName()))));
+    public MethodByteCodeBuilder filterByParameters(String... classes) throws NotFoundException {
+        HList<CtClass> parameters = HList.of(classes).map(clazz -> {
+            return ByteCodeBuilderFactory.getDefaultClassPoolSettings().getCtClass(clazz);
+        }, NotFoundException.class);
+        methods.removeIf(method -> {
+            return parameters.allMatch(ctClass -> {
+                return ArrayHList.create(method.getParameterTypes()).contains(innerParameter -> innerParameter.getName().equals(ctClass.getName()));
+            }, NotFoundException.class);
+        }, NotFoundException.class);
+
         return this;
     }
 
-    public MethodByteCodeBuilder setBodyReturnTrue() {
-        methods.forEach(method -> Runtime.run(() -> method.setBody("return true;")));
+    public MethodByteCodeBuilder setBodyReturnTrue() throws CannotCompileException {
+        methods.forEach(method -> method.setBody("return true;"), CannotCompileException.class);
         return this;
     }
 
-    public MethodByteCodeBuilder setBodyReturnFalse() {
-        methods.forEach(method -> Runtime.run(() -> method.setBody("return false;")));
+    public MethodByteCodeBuilder setBodyReturnFalse() throws CannotCompileException {
+        methods.forEach(method -> method.setBody("return false;"), CannotCompileException.class);
         return this;
     }
 
-    public MethodByteCodeBuilder setEmptyBody() {
-        methods.forEach(method -> Runtime.run(() -> method.setBody("return;")));
+    public MethodByteCodeBuilder setEmptyBody() throws CannotCompileException {
+        methods.forEach(method -> method.setBody("return;"), CannotCompileException.class);
         return this;
     }
 
-    public MethodByteCodeBuilder insertBefore() {
-        methods.forEach(method -> Runtime.run(() -> method.insertBefore(ACTION.toString())));
+    public MethodByteCodeBuilder insertBefore() throws CannotCompileException {
+        methods.forEach(method -> method.insertBefore(ACTION.toString()), CannotCompileException.class);
         return this;
     }
 
-    public MethodByteCodeBuilder insertBody() {
-        methods.forEach(method -> Runtime.run(() -> method.setBody(ACTION.toString())));
+    public MethodByteCodeBuilder insertBody() throws CannotCompileException {
+        methods.forEach(method -> method.setBody(ACTION.toString()), CannotCompileException.class);
         return this;
     }
 
-    public MethodByteCodeBuilder insertAfter() {
-        methods.forEach(method -> Runtime.run(() -> method.insertAfter(ACTION.toString())));
+    public MethodByteCodeBuilder insertAfter() throws CannotCompileException {
+        methods.forEach(method -> method.insertAfter(ACTION.toString()), CannotCompileException.class);
         return this;
     }
 
     public MethodByteCodeBuilder removeModifiers(Integer... modifiers) {
-        HStream<Integer> modifiersStream = HStream.of(modifiers);
+        HList<Integer> modifiersList = HList.of(modifiers);
         methods.forEach(method ->
-                modifiersStream.forEach(modifier ->
+                modifiersList.forEach(modifier ->
                         method.setModifiers(method.getModifiers() & ~modifier)));
         return this;
     }
 
     public MethodByteCodeBuilder addModifiers(Integer... modifiers) {
-        HStream<Integer> modifiersStream = HStream.of(modifiers);
-        methods.forEach(method -> modifiersStream.forEach(modifier -> method.setModifiers(method.getModifiers() | modifier)));
+        HList<Integer> modifiersList = HList.of(modifiers);
+        methods.forEach(method -> modifiersList.forEach(modifier -> method.setModifiers(method.getModifiers() | modifier)));
         return this;
     }
 
@@ -116,20 +119,8 @@ public class MethodByteCodeBuilder extends ByteCodeBuilder {
         return this;
     }
 
-    public MethodByteCodeBuilder addParameter(String parameterClassName) {
-        CtClass param = ByteCodeBuilderFactory.getDefaultClassPoolSettings().getCtClass(parameterClassName);
-        methods.forEach(method -> Runtime.run(() -> method.addParameter(param)));
-        return this;
-    }
-
-    public MethodByteCodeBuilder addLocalVariable(String name, String typeClassName) {
-        CtClass type = ByteCodeBuilderFactory.getDefaultClassPoolSettings().getCtClass(typeClassName);
-        methods.forEach(method -> Runtime.run(() -> method.addLocalVariable(name, type)));
-        return this;
-    }
-
-    public void delete() {
-        methods.forEach(method -> reference.removeMethod(method));
+    public void delete() throws NotFoundException {
+        methods.forEach(method -> reference.removeMethod(method), NotFoundException.class);
     }
 
     /*
@@ -139,12 +130,6 @@ public class MethodByteCodeBuilder extends ByteCodeBuilder {
      */
     public MethodByteCodeBuilder addPrintln(String message) {
         this.ACTION.append("System.out.println(").append(message).append(");");
-        return this;
-    }
-
-    public MethodByteCodeBuilder addCatchBlock(String catchCode, String exceptionClassName) {
-        CtClass e = ByteCodeBuilderFactory.getDefaultClassPoolSettings().getCtClass(exceptionClassName);
-        methods.forEach(method -> Runtime.run(() -> method.addCatch(catchCode, e)));
         return this;
     }
 

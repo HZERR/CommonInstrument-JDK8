@@ -7,3 +7,5 @@ build/tmp
 src/test
 settings.gradle
 out
+/src/main/java/ru/hzerr/file/FileReaderTask.java
+/src/main/java/ru/hzerr/Main.java

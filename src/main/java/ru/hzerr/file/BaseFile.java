@@ -2,10 +2,11 @@ package ru.hzerr.file;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import ru.hzerr.collections.list.HList;
 import ru.hzerr.file.exception.ValidationException;
+import ru.hzerr.file.exception.file.ByteBufferNotInitializationException;
 import ru.hzerr.file.exception.file.HFileRenameFailedException;
 import ru.hzerr.file.exception.file.HFileWriteException;
-import ru.hzerr.stream.BaseHStream;
 
 import java.io.File;
 import java.io.IOException;
@@ -61,7 +62,10 @@ public abstract class BaseFile implements IFSObject {
     public abstract <T extends BaseFile> void moveToFile(T file) throws IOException;
     public abstract <T extends BaseDirectory> void moveToDirectory(T directory) throws IOException;
     public abstract byte[] readToByteArray() throws IOException;
-    public abstract BaseHStream<String, ?> readLines(Charset charset) throws IOException;
+    public abstract HList<String> readLines(Charset charset) throws IOException;
+    public abstract HList<String> asyncReadLines(Charset charset) throws IOException;
+    public abstract void refreshDataInMemory() throws IOException;
+    public abstract HList<String> readFromMemory(Charset charset) throws ByteBufferNotInitializationException;
 
     /**
      * Writes the <code>toString()</code> value of each item in a collection to

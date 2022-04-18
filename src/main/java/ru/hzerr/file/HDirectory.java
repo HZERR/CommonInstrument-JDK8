@@ -1,6 +1,9 @@
 package ru.hzerr.file;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
+import ru.hzerr.collections.list.ArrayHList;
+import ru.hzerr.collections.list.HList;
 import ru.hzerr.file.annotation.MaybeRecursive;
 import ru.hzerr.file.annotation.NotRecursive;
 import ru.hzerr.file.annotation.Recursive;
@@ -10,9 +13,6 @@ import ru.hzerr.file.exception.file.HFileCreateImpossibleException;
 import ru.hzerr.file.exception.file.HFileCreationFailedException;
 import ru.hzerr.file.exception.file.HFileIsNotFileException;
 import ru.hzerr.file.exception.file.NoSuchHFileException;
-import ru.hzerr.file.stream.FileStream;
-import ru.hzerr.file.stream.FileStreamBuilder;
-import ru.hzerr.stream.HStream;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,6 +23,7 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.file.*;
 import java.nio.file.attribute.FileAttribute;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -36,7 +37,7 @@ public class HDirectory extends BaseDirectory {
     public HDirectory(String pathname) { super(pathname); }
     public HDirectory(String parent, String child) { super(parent, child); }
     public HDirectory(HDirectory parent, String child) { super(parent, child); }
-    HDirectory(Path path) { super(path.toString()); }
+    protected HDirectory(Path path) { super(path.toString()); }
 
     @Override
     public void create() throws HDirectoryIsNotDirectoryException, HDirectoryCreateImpossibleException {
@@ -96,46 +97,65 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     @NotRecursive
-    public HStream<BaseFile> getFiles() throws IOException {
+    public HList<BaseFile> getFiles() throws IOException {
         checkExists(this);
         try(Stream<Path> pathStream = Files.list(directory.toPath())) {
-            return HStream.of(pathStream.collect(Collectors.toList()))
-                .filter(this::isNotDirectory)
-                    .map(HFile::new);
+            return pathStream
+                    .parallel()
+                    .filter(this::isNotDirectory)
+                    .map(HFile::new)
+                    .collect(Collectors.toCollection(ArrayHList::new));
         }
     }
 
     @Override
     @NotRecursive
-    public HStream<BaseDirectory> getDirectories() throws IOException {
+    public HList<BaseDirectory> getDirectories() throws IOException {
         checkExists(this);
         try(Stream<Path> pathStream = Files.list(directory.toPath())) {
-            return HStream.of(pathStream.collect(Collectors.toList()))
+            return pathStream
+                    .parallel()
                     .filter(Files::isDirectory)
-                    .map(HDirectory::new);
+                    .map(HDirectory::new)
+                    .collect(Collectors.toCollection(ArrayHList::new));
         }
     }
 
     @Override
     @MaybeRecursive
-    public FileStream getAllFiles(boolean recursive) throws IOException {
-        checkExists(this);
-        if (recursive) {
-            return FileStream.of(walk());
-        } else try (Stream<Path> pathStream = Files.list(directory.toPath())) {
-            return FileStreamBuilder.newBuilder().add(pathStream.collect(Collectors.toList())).newStream();
-        }
-    }
-
-    @Override
-    @MaybeRecursive
-    public HStream<BaseFile> getFiles(boolean recursive) throws IOException {
+    public HList<IFSObject> getAllFiles(boolean recursive) throws IOException {
         checkExists(this);
         if (recursive) {
             try (Stream<Path> pathStream = Files.walk(directory.toPath())) {
-                return HStream.of(pathStream.collect(Collectors.toList()))
-                        .filter(path -> isNotDirectory(path) && !path.equals(directory.toPath()))
-                        .map(HFile::new);
+                return pathStream
+                        .parallel()
+                        .filter(path -> !directory.toPath().equals(path))
+                        .map(path -> {
+                            return Files.isDirectory(path) ? new HDirectory(path) : new HFile(path);
+                        })
+                        .collect(Collectors.toCollection(ArrayHList::new));
+            }
+        } else try (Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return pathStream
+                    .parallel()
+                    .map(path -> {
+                        return Files.isDirectory(path) ? new HDirectory(path) : new HFile(path);
+                    })
+                    .collect(Collectors.toCollection(ArrayHList::new));
+        }
+    }
+
+    @Override
+    @MaybeRecursive
+    public HList<BaseFile> getFiles(boolean recursive) throws IOException {
+        checkExists(this);
+        if (recursive) {
+            try (Stream<Path> pathStream = Files.walk(directory.toPath())) {
+                return pathStream
+                        .parallel()
+                        .filter(this::isNotDirectory)
+                        .map(HFile::new)
+                        .collect(Collectors.toCollection(ArrayHList::new));
             }
         } else
             return getFiles();
@@ -143,13 +163,15 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     @MaybeRecursive
-    public HStream<BaseDirectory> getDirectories(boolean recursive) throws IOException {
+    public HList<BaseDirectory> getDirectories(boolean recursive) throws IOException {
         checkExists(this);
         if (recursive) {
             try (Stream<Path> pathStream = Files.walk(directory.toPath())) {
-                return HStream.of(pathStream.collect(Collectors.toList()))
+                return pathStream
+                        .parallel()
                         .filter(path -> Files.isDirectory(path) && !path.equals(directory.toPath()))
-                        .map(HDirectory::new);
+                        .map(HDirectory::new)
+                        .collect(Collectors.toCollection(ArrayHList::new));
             }
         } else
             return getDirectories();
@@ -157,65 +179,96 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     @NotRecursive
-    public <T extends BaseFile> HStream<BaseFile> getFilesExcept(T... filesToBeExcluded) throws IOException {
+    public <T extends BaseFile> HList<BaseFile> getFilesExcept(T... filesToBeExcluded) throws IOException {
         checkExists(this);
-        final HStream<BaseFile> excluded = HStream.of(filesToBeExcluded);
-        return this.getFiles().filter(file -> excluded.noneMatch(file::equals));
+        final HList<BaseFile> excluded = HList.of(filesToBeExcluded);
+        try(Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return pathStream
+                    .parallel()
+                    .filter(path -> {
+                        return isNotDirectory(path) && excluded.noneMatch(baseFile -> baseFile.asPath().equals(path));
+                    })
+                    .map(HFile::new)
+                    .collect(Collectors.toCollection(ArrayHList::new));
+        }
     }
 
     @Override
     @NotRecursive
-    public <T extends BaseFile> HStream<BaseFile> getFilesExcept(String... fileNames) throws IOException {
+    public <T extends BaseFile> HList<BaseFile> getFilesExcept(String... fileNames) throws IOException {
         checkExists(this);
-        final HStream<String> excludedFileNames = HStream.of(fileNames);
-        return this.getFiles()
-                .filter(file -> excludedFileNames.noneMatch(name -> file.getName().equals(name)));
+        final HList<String> excludedFileNames = HList.of(fileNames);
+        try(Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return pathStream
+                    .parallel()
+                    .filter(path -> {
+                        return isNotDirectory(path) && excludedFileNames.noneMatch(fileName -> FilenameUtils.getName(path.toString()).equals(fileName));
+                    })
+                    .map(HFile::new)
+                    .collect(Collectors.toCollection(ArrayHList::new));
+        }
     }
 
     @Override
-    public <T extends BaseFile> HStream<BaseFile> getFilesExcept(boolean recursive, T... filesToBeExcluded) throws IOException {
+    @MaybeRecursive
+    public <T extends BaseFile> HList<BaseFile> getFilesExcept(boolean recursive, T... filesToBeExcluded) throws IOException {
         checkExists(this);
-        final HStream<BaseFile> excludedFiles = HStream.of(filesToBeExcluded);
+        final HList<BaseFile> excludedFiles = HList.of(filesToBeExcluded);
         if (recursive) {
-            return this.getFiles(true)
-                    .filter(file -> excludedFiles.noneMatch(file::equals));
+            try (Stream<Path> pathStream = Files.walk(directory.toPath())) {
+                return pathStream
+                        .parallel()
+                        .filter(path -> isNotDirectory(path) && excludedFiles.noneMatch(file -> file.asPath().equals(path)))
+                        .map(HFile::new)
+                        .collect(Collectors.toCollection(ArrayHList::new));
+            }
         } else
             return this.getFilesExcept(filesToBeExcluded);
     }
 
     @Override
     @NotRecursive
-    public <T extends BaseDirectory> HStream<BaseDirectory> getDirectoriesExcept(T... directoriesToBeExcluded) throws IOException {
+    public <T extends BaseDirectory> HList<BaseDirectory> getDirectoriesExcept(T... directoriesToBeExcluded) throws IOException {
         checkExists(this);
-        final HStream<BaseDirectory> excludedStream = HStream.of(directoriesToBeExcluded);
-        return this.getDirectories()
-                .filter(dir -> excludedStream.noneMatch(dir::equals));
+        final HList<BaseDirectory> excludedStream = HList.of(directoriesToBeExcluded);
+        try (Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return pathStream
+                    .parallel()
+                    .filter(path -> Files.isDirectory(path) && !path.equals(directory.toPath()) && excludedStream.noneMatch(dir -> dir.asPath().equals(path)))
+                    .map(HDirectory::new)
+                    .collect(Collectors.toCollection(ArrayHList::new));
+        }
     }
 
     @Override
     @NotRecursive
-    public <T extends BaseDirectory> HStream<BaseDirectory> getDirectoriesExcept(String... directoryNames) throws IOException {
+    public <T extends BaseDirectory> HList<BaseDirectory> getDirectoriesExcept(String... directoryNames) throws IOException {
         checkExists(this);
-        final HStream<String> names = HStream.of(directoryNames);
-        return this.getDirectories()
-                .filter(dir -> names.noneMatch(name -> dir.getName().equals(name)));
+        final HList<String> names = HList.of(directoryNames);
+        try(Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return pathStream
+                    .parallel()
+                    .filter(path -> Files.isDirectory(path) && names.noneMatch(name -> FilenameUtils.getName(path.toString()).equals(name)))
+                    .map(HDirectory::new)
+                    .collect(Collectors.toCollection(ArrayHList::new));
+        }
     }
 
     @Override
-    public <T extends BaseDirectory> HStream<BaseDirectory> getDirectoriesExcept(boolean recursive, T... directoriesToBeExcluded) throws IOException {
+    @MaybeRecursive
+    public <T extends BaseDirectory> HList<BaseDirectory> getDirectoriesExcept(boolean recursive, T... directoriesToBeExcluded) throws IOException {
         checkExists(this);
-        final HStream<T> filesToBeExcluded = HStream.of(directoriesToBeExcluded);
+        final HList<T> filesToBeExcluded = HList.of(directoriesToBeExcluded);
         if (recursive) {
-            try(Stream<Path> pathStream = Files.find(directory.toPath(), Integer.MAX_VALUE, (path, basicFileAttributes) -> {
-                if (Files.isDirectory(path)) {
-                    HDirectory dir = new HDirectory(path);
-                    return filesToBeExcluded.allMatch(excludedDir -> {
-                        return excludedDir.notIsHierarchicalChild(dir) && dir.notIsHierarchicalChild(excludedDir);
-                    });
-                } else
-                    return false;
-            })) {
-                return HStream.of(pathStream.collect(Collectors.toList())).map(HDirectory::new);
+            try (Stream<Path> pathStream = Files.walk(directory.toPath())) {
+                return pathStream
+                        .parallel()
+                        .filter(path -> Files.isDirectory(path) && filesToBeExcluded.allMatch(excludedDir -> {
+                            HDirectory dir = new HDirectory(path);
+                            return excludedDir.notIsHierarchicalChild(dir) && dir.notIsHierarchicalChild(excludedDir);
+                        }))
+                        .map(HDirectory::new)
+                        .collect(Collectors.toCollection(ArrayHList::new));
             }
         } else
             return this.getDirectoriesExcept(directoriesToBeExcluded);
@@ -223,166 +276,268 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     @MaybeRecursive
-    public FileStream getAllFilesExcept(FileStream filesToBeExcluded, boolean recursive) throws IOException {
+    @SuppressWarnings("ConstantConditions")
+    public HList<IFSObject> getAllFilesExcept(HList<IFSObject> filesToBeExcluded, boolean recursive) throws IOException {
         checkExists(this);
         if (recursive) {
-            FileStream filteredStream = this.getAllFiles(true);
-            return filteredStream
-                    .dirFilter(dir -> filesToBeExcluded.dirAllMatch(excludedDir -> {
-                        return excludedDir.notIsHierarchicalChild(dir) && dir.notIsHierarchicalChild(excludedDir);
-                    }) && filesToBeExcluded.fileAllMatch(excludedFile -> excludedFile.notIsHierarchicalChild(dir)))
-                    .fileFilter(file -> filesToBeExcluded.fileAllMatch(file::notEquals));
-        } else
-            return FileStream.of(walk()).filter(o -> filesToBeExcluded.noneMatch(o::equals));
-    }
+            try (Stream<Path> pathStream = Files.walk(directory.toPath())) {
+                return pathStream
+                        .parallel()
+                        .map(path -> {
+                            return Files.isDirectory(path) ? new HDirectory(path) : new HFile(path);
+                        })
+                        .filter(ifsObject -> {
+                            if (Files.isDirectory(ifsObject.asPath())) {
+                                return !directory.toPath().equals(ifsObject.asPath()) && filesToBeExcluded.allMatch(excludedFSObj -> {
+                                    if (Files.isDirectory(excludedFSObj.asPath())) {
+                                        return excludedFSObj.notIsHierarchicalChild((HDirectory) ifsObject) && ifsObject.notIsHierarchicalChild((HDirectory) excludedFSObj);
+                                    } else
+                                        return excludedFSObj.notIsHierarchicalChild((HDirectory) ifsObject);
+                                });
+                            } else
+                                return filesToBeExcluded.allMatch(ifsObject::notEquals);
+                        })
 
-    @Override
-    public boolean isEmpty() {
-        checkExists(this);
-        final String[] fileNames = directory.list();
-        // Double-check that some other thread or process has deleted
-        // the directory in the background
-        if (fileNames != null) {
-            return fileNames.length == 0;
-        } else
-            throw new NoSuchHDirectoryException("Directory does not exist: " + directory);
-    }
-
-    @Override
-    public boolean isNotEmpty() { return !isEmpty(); }
-
-    @Override
-    public boolean hasOnlyFiles() throws IOException {
-        checkExists(this);
-        int fileCount = 0;
-        try (DirectoryStream<Path> paths = Files.newDirectoryStream(directory.toPath())) {
-            while (paths.iterator().hasNext()) {
-                Path path = paths.iterator().next();
-                if (this.isNotDirectory(path)) {
-                    fileCount = fileCount + 1;
-                } else
-                    return false;
+                        .collect(Collectors.toCollection(ArrayHList::new));
             }
-
-            return fileCount > 0;
+        } else try (Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return pathStream
+                    .filter(path -> {
+                        return !asPath().equals(path) && filesToBeExcluded.noneMatch(obj -> path.equals(obj.asPath()));
+                    })
+                    .map(path -> {
+                        return Files.isDirectory(path) ? new HDirectory(path) : new HFile(path);
+                    })
+                    .collect(Collectors.toCollection(ArrayHList::new));
         }
     }
 
     @Override
+    public boolean isEmpty() throws IOException {
+        checkExists(this);
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(directory.toPath())) {
+            return !files.iterator().hasNext();
+        }
+    }
+
+    @Override
+    public boolean isNotEmpty() throws IOException { return !isEmpty(); }
+
+    @Override
+    @NotRecursive
+    public boolean hasOnlyFiles() throws IOException {
+        checkExists(this);
+        boolean hasFile = false;
+        try (DirectoryStream<Path> paths = Files.newDirectoryStream(directory.toPath())) {
+            while (paths.iterator().hasNext()) {
+                Path path = paths.iterator().next();
+                if (isNotDirectory(path)) {
+                    hasFile = true;
+                } else
+                    return false;
+            }
+
+            return hasFile;
+        }
+    }
+
+    @Override
+    @NotRecursive
     public boolean hasOnlyDirectories() throws IOException {
         checkExists(this);
-        int dirCount = 0;
+        boolean hasDirectory = false;
         try (DirectoryStream<Path> paths = Files.newDirectoryStream(directory.toPath())) {
             while (paths.iterator().hasNext()) {
                 Path path = paths.iterator().next();
                 if (Files.isDirectory(path)) {
-                    dirCount = dirCount + 1;
+                    hasDirectory = true;
                 } else
                     return false;
             }
 
-            return dirCount > 0;
+            return hasDirectory;
         }
     }
 
     @Override
+    @NotRecursive
     public boolean notFoundInternalDirectories() throws IOException {
         checkExists(this);
-        return this.getDirectories().count() == 0;
+        try(Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return pathStream.parallel().noneMatch(Files::isDirectory);
+        }
     }
 
     @Override
+    @NotRecursive
     public boolean notFoundInternalFiles() throws IOException {
         checkExists(this);
-        return this.getFiles().count() == 0;
+        try(Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return pathStream.parallel().noneMatch(this::isNotDirectory);
+        }
     }
 
     @Override
+    @MaybeRecursive
     public boolean contains(IFSObject object, boolean recursive) throws IOException {
         checkExists(this);
-        FileStream files = this.getAllFiles(recursive);
-        return files.anyMatch(object::equals);
-    }
-
-    @Override
-    public FileStream find(Predicate<? super IFSObject> matcher) throws IOException {
-        checkExists(this);
-        return this.getAllFiles(true).filter(matcher::test);
-    }
-
-    @Override
-    public FileStream find(String glob) throws IOException {
-        checkExists(this);
-        if (glob.equals("*"))
-            return this.getAllFiles(true);
-        final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + glob);
-        try (Stream<Path> pathStream = Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
-            return matcher.matches(path);
-        }))) {
-            return FileStreamBuilder.newBuilder().add(pathStream.collect(Collectors.toList())).newStream();
+        if (recursive) {
+            try (Stream<Path> pathStream = Files.walk(directory.toPath())) {
+                return pathStream
+                        .parallel()
+                        .anyMatch(path -> object.asPath().equals(path));
+            }
+        } else try (Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return pathStream
+                    .parallel()
+                    .anyMatch(path -> object.asPath().equals(path));
         }
     }
 
     @Override
-    public FileStream findByNames(String... names) throws IOException {
+    @Recursive
+    public HList<IFSObject> find(Predicate<? super IFSObject> matcher) throws IOException {
         checkExists(this);
-        final HStream<String> includeNames = HStream.of(names);
-        return this.getAllFiles(true)
-                .filter(o -> includeNames.anyMatch(name -> o.getName().startsWith(name)));
-    }
-
-    @Override
-    public HStream<BaseDirectory> findDirectories(Predicate<? super BaseDirectory> matcher) throws IOException {
-        checkExists(this);
-        return this.getDirectories(true).filter(matcher::test);
-    }
-
-    @Override
-    public HStream<BaseDirectory> findDirectories(String glob) throws IOException {
-        checkExists(this);
-        if (glob.equals("*"))
-            return this.getDirectories(true);
-        final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + glob);
         try (Stream<Path> pathStream = Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
-            return Files.isDirectory(path) && matcher.matches(path);
+            // maybe get the generic class through reflection?
+            if (Files.isDirectory(path)) {
+                return !directory.toPath().equals(path) && matcher.test(new HDirectory(path));
+            } else
+                return matcher.test(new HFile(path));
         }))) {
-            return HStream.of(pathStream.collect(Collectors.toList())).map(HDirectory::new);
+            return pathStream
+                    .map(path -> {
+                        return Files.isDirectory(path) ? new HDirectory(path) : new HFile(path);
+                    })
+                    .collect(Collectors.toCollection(ArrayHList::new));
         }
     }
 
     @Override
-    public HStream<BaseDirectory> findDirectoriesByNames(String... names) throws IOException {
-        checkExists(this);
-        final HStream<String> includeNames = HStream.of(names);
-        return this.getDirectories(true)
-                .filter(o -> includeNames.anyMatch(name -> o.getName().equals(name)));
-    }
-
-    @Override
-    public HStream<BaseFile> findFiles(Predicate<? super BaseFile> matcher) throws IOException {
-        checkExists(this);
-        return this.getFiles(true).filter(matcher::test);
-    }
-
-    @Override
-    public HStream<BaseFile> findFiles(String glob) throws IOException {
+    @Recursive
+    public HList<IFSObject> find(String glob) throws IOException {
         checkExists(this);
         if (glob.equals("*"))
-            return this.getFiles(true);
+            return getAllFiles(true);
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + glob);
         try (Stream<Path> pathStream = Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
-            return this.isNotDirectory(path) && matcher.matches(path);
+            return !path.equals(asPath()) && matcher.matches(path);
         }))) {
-            return HStream.of(pathStream.collect(Collectors.toList())).map(HFile::new);
+            return pathStream
+                    .map(path -> {
+                        return Files.isDirectory(path) ? new HDirectory(path) : new HFile(path);
+                    })
+                    .collect(Collectors.toCollection(ArrayHList::new));
         }
     }
 
     @Override
-    public HStream<BaseFile> findFilesByNames(String... names) throws IOException {
+    @Recursive
+    public HList<IFSObject> findByNames(String... names) throws IOException {
         checkExists(this);
-        final HStream<String> includeNames = HStream.of(names);
-        return this.getFiles(true)
-                .filter(o -> includeNames.anyMatch(name -> o.getName().startsWith(name)));
+        final HList<String> includeNames = HList.of(names);
+        try (Stream<Path> pathStream = Files.walk(directory.toPath())) {
+            return pathStream
+                    .parallel()
+                    .filter(path -> !directory.toPath().equals(path) && includeNames.anyMatch(name -> {
+                        return FilenameUtils.equalsOnSystem(FilenameUtils.getName(path.toString()), name);
+                    }))
+                    .map(path -> {
+                        return Files.isDirectory(path) ? new HDirectory(path) : new HFile(path);
+                    })
+                    .collect(Collectors.toCollection(ArrayHList::new));
+        }
+    }
+
+    @Override
+    @Recursive
+    public HList<BaseDirectory> findDirectories(Predicate<? super BaseDirectory> matcher) throws IOException {
+        checkExists(this);
+        try (Stream<Path> pathStream = Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
+            return Files.isDirectory(path) && !asPath().equals(path) && matcher.test(new HDirectory(path));
+        }))) {
+            return pathStream
+                    .map(HDirectory::new)
+                    .collect(Collectors.toCollection(ArrayHList::new));
+        }
+    }
+
+    @Override
+    @Recursive
+    public HList<BaseDirectory> findDirectories(String glob) throws IOException {
+        checkExists(this);
+        if (glob.equals("*"))
+            return getDirectories(true);
+        final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + glob);
+        try (Stream<Path> pathStream = Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
+            return Files.isDirectory(path) && !asPath().equals(path) && matcher.matches(path);
+        }))) {
+            return pathStream
+                    .map(HDirectory::new)
+                    .collect(Collectors.toCollection(ArrayHList::new));
+        }
+    }
+
+    @Override
+    @Recursive
+    public HList<BaseDirectory> findDirectoriesByNames(String... names) throws IOException {
+        // TODO MAYBE using glob?
+        checkExists(this);
+        final HList<String> includeNames = HList.of(names);
+        try (Stream<Path> pathStream = Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
+            return Files.isDirectory(path) && !asPath().equals(path) && includeNames.anyMatch(name -> {
+                return FilenameUtils.equalsOnSystem(FilenameUtils.getName(path.toString()), name);
+            });
+        }))) {
+            return pathStream
+                    .map(HDirectory::new)
+                    .collect(Collectors.toCollection(ArrayHList::new));
+        }
+    }
+
+    @Override
+    @Recursive
+    public HList<BaseFile> findFiles(Predicate<? super BaseFile> matcher) throws IOException {
+        checkExists(this);
+        try (Stream<Path> pathStream = Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
+            return isNotDirectory(path) && matcher.test(new HFile(path));
+        }))) {
+            return pathStream
+                    .map(HFile::new)
+                    .collect(Collectors.toCollection(ArrayHList::new));
+        }
+    }
+
+    @Override
+    @Recursive
+    public HList<BaseFile> findFiles(String glob) throws IOException {
+        checkExists(this);
+        if (glob.equals("*"))
+            return getFiles(true);
+        final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + glob);
+        try (Stream<Path> pathStream = Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
+            return isNotDirectory(path) && matcher.matches(path);
+        }))) {
+            return pathStream
+                    .map(HFile::new)
+                    .collect(Collectors.toCollection(ArrayHList::new));
+        }
+    }
+
+    @Override
+    @Recursive
+    public HList<BaseFile> findFilesByNames(String... names) throws IOException {
+        checkExists(this);
+        final HList<String> includeNames = HList.of(names);
+        try (Stream<Path> pathStream = Files.find(directory.toPath(), Integer.MAX_VALUE, ((path, basicFileAttributes) -> {
+            return isNotDirectory(path) && includeNames.anyMatch(name -> {
+                return FilenameUtils.equalsOnSystem(FilenameUtils.getName(path.toString()), name);
+            });
+        }))) {
+            return pathStream
+                    .map(HFile::new)
+                    .collect(Collectors.toCollection(ArrayHList::new));
+        }
     }
 
     @Override
@@ -420,52 +575,90 @@ public class HDirectory extends BaseDirectory {
     @Recursive
     public <T extends BaseDirectory> boolean deleteExcept(T... directories) throws IOException {
         checkExists(this);
-        final HStream<BaseDirectory> excludedDirectories = HStream.of(directories);
-        FileStream filteredStream = this.getAllFiles(true);
-        filteredStream.parallelIfNeeded();
-        filteredStream
-                .dirFilter(dir -> !dir.directory.equals(directory) && excludedDirectories.allMatch(excludedDir -> {
-                    return excludedDir.notIsHierarchicalChild(dir) && dir.notIsHierarchicalChild(excludedDir);
-                }))
-                .fileFilter(file -> excludedDirectories.allMatch(file::notIsHierarchicalChild))
-                .forEach(IFSObject::delete);
-        return filteredStream.allMatch(IFSObject::notExists);
+        final HList<BaseDirectory> excludedDirectories = HList.of(directories);
+        try (Stream<Path> pathStream = Files.walk(directory.toPath())) {
+            HList<IFSObject> objects = pathStream
+                    .parallel()
+                    .filter(path -> {
+                        if (Files.isDirectory(path)) {
+                            return !directory.toPath().equals(path) && excludedDirectories.allMatch(excludedDir -> {
+                                return excludedDir.notIsHierarchicalChild(new HDirectory(path)) && new HDirectory(path).notIsHierarchicalChild(excludedDir);
+                            });
+                        } else return excludedDirectories.allMatch(excludedDir -> new HFile(path).notIsHierarchicalChild(excludedDir));
+                    })
+                    .map(path -> {
+                        return Files.isDirectory(path) ? new HDirectory(path) : new HFile(path);
+                    })
+                    .collect(Collectors.toCollection(ArrayHList::new));
+            return objects.allMatch(obj -> {
+                obj.delete();
+                return obj.notExists();
+            }, IOException.class);
+        }
     }
 
     @Override
     @Recursive
     public <T extends BaseFile> boolean deleteExcept(T... files) throws IOException {
         checkExists(this);
-        final HStream<BaseFile> excludedFiles = HStream.of(files);
-        FileStream filteredStream = this.getAllFiles(true);
-        filteredStream.parallelIfNeeded();
-        filteredStream
-                .dirFilter(dir -> !dir.directory.equals(directory) && excludedFiles.allMatch(excludedFile -> excludedFile.notIsHierarchicalChild(dir)))
-                .fileFilter(file -> excludedFiles.allMatch(file::notEquals))
-                .forEach(IFSObject::delete);
-        return filteredStream.allMatch(IFSObject::notExists);
+        final HList<BaseFile> excludedFiles = HList.of(files);
+        try (Stream<Path> pathStream = Files.walk(directory.toPath())) {
+            HList<IFSObject> objects = pathStream
+                    .parallel()
+                    .filter(path -> {
+                        if (Files.isDirectory(path)) {
+                            return !directory.toPath().equals(path) && excludedFiles.allMatch(excludedDir -> {
+                                return excludedDir.notIsHierarchicalChild(new HDirectory(path));
+                            });
+                        } else return excludedFiles.allMatch(file -> new HFile(path).notEquals(file));
+                    })
+                    .map(path -> {
+                        return Files.isDirectory(path) ? new HDirectory(path) : new HFile(path);
+                    })
+                    .collect(Collectors.toCollection(ArrayHList::new));
+            return objects.allMatch(obj -> {
+                obj.delete();
+                return obj.notExists();
+            }, IOException.class);
+        }
     }
 
     @Override
     @Recursive
-    public boolean deleteExcept(FileStream excludedFiles) throws IOException {
+    public boolean deleteExcept(HList<IFSObject> excludedFiles) throws IOException {
         checkExists(this);
-        FileStream filteredStream = this.getAllFiles(true);
-        filteredStream.parallelIfNeeded();
-        filteredStream
-                .dirFilter(dir -> !dir.directory.equals(directory) && excludedFiles.dirAllMatch(excludedDir -> {
-                            return excludedDir.notIsHierarchicalChild(dir) && dir.notIsHierarchicalChild(excludedDir);
-                        }) && excludedFiles.fileAllMatch(excludedFile -> excludedFile.notIsHierarchicalChild(dir)))
-                .fileFilter(file -> excludedFiles.fileAllMatch(file::notEquals))
-                .forEach(IFSObject::delete);
-        return filteredStream.allMatch(IFSObject::notExists);
+        try (Stream<Path> pathStream = Files.walk(directory.toPath())) {
+            HList<IFSObject> objects = pathStream
+                    .parallel()
+                    .filter(path -> {
+                        if (Files.isDirectory(path)) {
+                            return !directory.toPath().equals(path) && excludedFiles.allMatch(ifsObject -> {
+                                if (ifsObject instanceof BaseDirectory) {
+                                    return ifsObject.notIsHierarchicalChild(new HDirectory(path)) && new HDirectory(path).notIsHierarchicalChild((HDirectory) ifsObject);
+                                } else
+                                    return ifsObject.notIsHierarchicalChild(new HDirectory(path));
+                            });
+                        } else
+                            return excludedFiles.allMatch(file -> {
+                                return !isNotDirectory(file.asPath()) || new HFile(path).notEquals(file);
+                            });
+                    })
+                    .map(path -> {
+                        return Files.isDirectory(path) ? new HDirectory(path) : new HFile(path);
+                    })
+                    .collect(Collectors.toCollection(ArrayHList::new));
+            return objects.allMatch(obj -> {
+                obj.delete();
+                return obj.notExists();
+            }, IOException.class);
+        }
     }
 
     @Override
     public boolean delete(String name) throws IOException {
         checkExists(this);
         File resource = new File(directory, name);
-        if (!resource.exists()) throw new NoSuchHFileException("File " + resource + " not found");
+        if (!resource.exists()) throw new NoSuchFileException("File " + resource + " not found");
         FileUtils.forceDelete(resource);
         return !resource.exists();
     }
@@ -512,73 +705,90 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
-    public boolean checkCountFiles(Integer count) throws IOException {
+    @NotRecursive
+    public boolean checkCountFiles(Long count) throws IOException {
         checkExists(this);
-        return walk().count() == count;
-    }
-
-    @Override
-    public boolean checkCountOnlyFiles(Integer count) throws IOException {
-        checkExists(this);
-        return walk().filter(Files::isDirectory).count() == count;
-    }
-
-    @Override
-    public boolean checkCountOnlyDirectories(Integer count) throws IOException {
-        checkExists(this);
-        return walk().filter(Files::isRegularFile).count() == count;
-    }
-
-    @Override
-    public boolean hasOnlyFile() throws IOException {
-        checkExists(this);
-        HStream<Path> stream = walk();
-        if (stream.count() == 1) {
-            Optional<Path> file = stream.findFirst();
-            return file.isPresent();
+        try (Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return pathStream.count() == count;
         }
-
-        return false;
     }
 
     @Override
-    public boolean hasOnlyFile(String fileName) throws IOException {
+    @NotRecursive
+    public boolean checkCountOnlyFiles(Long count) throws IOException {
         checkExists(this);
-        HStream<Path> stream = walk();
-        if (stream.count() == 1) {
-            Optional<Path> file = stream.findFirst();
-            if (file.isPresent()) {
-                return file.get().endsWith(fileName);
-            }
+        try (Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return pathStream
+                    .parallel()
+                    .filter(this::isNotDirectory)
+                    .count() == count;
         }
-
-        return false;
     }
 
     @Override
-    public boolean hasOnlyDirectory() throws IOException {
+    @NotRecursive
+    public boolean checkCountOnlyDirectories(Long count) throws IOException {
         checkExists(this);
-        HStream<Path> stream = walk();
-        if (stream.count() == 1) {
-            Optional<Path> file = stream.findFirst();
-            return file.isPresent();
+        try (Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return pathStream
+                    .parallel()
+                    .filter(Files::isDirectory)
+                    .count() == count;
         }
-
-        return false;
     }
 
     @Override
-    public boolean hasOnlyDirectory(String directoryName) throws IOException {
+    @NotRecursive
+    public boolean hasOnly1File() throws IOException {
         checkExists(this);
-        HStream<Path> stream = walk();
-        if (stream.count() == 1) {
-            Optional<Path> file = stream.findFirst();
-            if (file.isPresent()) {
-                return file.get().endsWith(directoryName);
-            }
+        try (Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return pathStream
+                    .filter(this::isNotDirectory)
+                    .count() == 1L;
         }
+    }
 
-        return false;
+    @Override
+    @NotRecursive
+    public boolean hasOnly1File(String fileName) throws IOException {
+        checkExists(this);
+        try (Stream<Path> pathStream = Files.list(directory.toPath())) {
+            List<Path> file = pathStream
+                    .filter(this::isNotDirectory)
+                    .collect(Collectors.toList());
+            return file.size() == 1 && FilenameUtils.equalsOnSystem(FilenameUtils.getName(file.get(0).toString()), fileName);
+        }
+    }
+
+    @Override
+    @NotRecursive
+    public boolean hasOnly1Directory() throws IOException {
+        checkExists(this);
+        try (Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return pathStream
+                    .filter(Files::isDirectory)
+                    .count() == 1L;
+        }
+    }
+
+    @Override
+    @NotRecursive
+    public boolean hasOnly1Directory(String directoryName) throws IOException {
+        checkExists(this);
+        try (Stream<Path> pathStream = Files.list(directory.toPath())) {
+            List<Path> file = pathStream
+                    .filter(Files::isDirectory)
+                    .collect(Collectors.toList());
+            return file.size() == 1 && FilenameUtils.equalsOnSystem(FilenameUtils.getName(file.get(0).toString()), directoryName);
+        }
+    }
+
+    @Override
+    @NotRecursive
+    public boolean hasOnly1FileOrDirectory() throws IOException {
+        try (Stream<Path> pathStream = Files.list(directory.toPath())) {
+            return pathStream.count() == 1L;
+        }
     }
 
     public <T extends BaseDirectory> void moveContentToDirectory(T directory, boolean shouldDeleteDirToBeMoved) throws IOException {
@@ -636,13 +846,6 @@ public class HDirectory extends BaseDirectory {
     }
 
     private boolean isNotDirectory(Path path) { return !Files.isDirectory(path); }
-
-    private HStream<Path> walk() throws IOException {
-        try (Stream<Path> pathStream = Files.walk(directory.toPath())) {
-            return HStream.of(pathStream.collect(Collectors.toList()))
-                    .filter(path -> !asPath().equals(path));
-        }
-    }
 
     private boolean isHierarchicalChild0(BaseDirectory superParent) {
         if (this.directory.equals(superParent.directory)) return true;

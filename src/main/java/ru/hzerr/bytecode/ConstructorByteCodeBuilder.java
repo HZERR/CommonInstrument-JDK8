@@ -1,96 +1,78 @@
 package ru.hzerr.bytecode;
 
+import javassist.CannotCompileException;
 import javassist.CtClass;
 import javassist.CtConstructor;
+import javassist.NotFoundException;
 import ru.hzerr.collections.list.ArrayHList;
-import ru.hzerr.stream.HStream;
-import ru.hzerr.stream.function.Predicate;
+import ru.hzerr.collections.list.HList;
 
-import java.util.Arrays;
+import java.util.function.Predicate;
 
 public class ConstructorByteCodeBuilder extends ByteCodeBuilder {
 
     private ConstructorByteCodeBuilder() {
     }
 
-    private HStream<CtConstructor> constructors;
+    private HList<CtConstructor> constructors;
     private final StringBuilder ACTION = new StringBuilder();
 
     public static ConstructorByteCodeBuilder init(CtConstructor... constructors) {
         ConstructorByteCodeBuilder builder = new ConstructorByteCodeBuilder();
-        builder.constructors = HStream.of(constructors);
+        builder.constructors = HList.of(constructors);
         return builder;
     }
 
     public static ConstructorByteCodeBuilder init(CtClass ctClass) {
         ConstructorByteCodeBuilder builder = new ConstructorByteCodeBuilder();
-        builder.constructors = HStream.of(ctClass.getDeclaredConstructors());
+        builder.constructors = HList.of(ctClass.getDeclaredConstructors());
         builder.reference = ctClass;
         return builder;
     }
 
     public ConstructorByteCodeBuilder filter(Predicate<? super CtConstructor> predicate) {
-        constructors.filter(predicate);
+        constructors.removeIf(predicate);
         return this;
     }
 
-    public ConstructorByteCodeBuilder filterByParameters(String... classes) {
-        HStream<CtClass> ctClassHStream = HStream.of(classes).map(
-                clazz -> Runtime.call(() ->
-                        ByteCodeBuilderFactory.getDefaultClassPoolSettings().getCtClass(clazz)));
-        constructors.filter(constructor ->
-                ctClassHStream.allMatch(ctClass ->
-                        ArrayHList.create(Runtime.call(constructor::getParameterTypes)).contains(innerParameter -> innerParameter.getName().equals(ctClass.getName()))));
+    public ConstructorByteCodeBuilder filterByParameters(String... classes) throws NotFoundException {
+        HList<CtClass> ctClasses = HList.of(classes).map(clazz -> ByteCodeBuilderFactory.getDefaultClassPoolSettings().getCtClass(clazz), NotFoundException.class);
+        constructors.removeIf(constructor ->
+                ctClasses.allMatch(ctClass ->
+                        ArrayHList.create(constructor.getParameterTypes())
+                                .contains(innerParameter -> innerParameter.getName().equals(ctClass.getName())), NotFoundException.class), NotFoundException.class);
         return this;
     }
 
-    public ConstructorByteCodeBuilder setEmptyBody() {
-        constructors.forEach(constructor -> Runtime.run(() -> constructor.setBody("return;")));
+    public ConstructorByteCodeBuilder setEmptyBody() throws CannotCompileException {
+        constructors.forEach(constructor -> constructor.setBody("return;"), CannotCompileException.class);
         return this;
     }
 
-    public ConstructorByteCodeBuilder insertBefore() {
-        constructors.forEach(constructor -> Runtime.run(() -> constructor.insertBefore(ACTION.toString())));
+    public ConstructorByteCodeBuilder insertBefore() throws CannotCompileException {
+        constructors.forEach(constructor -> constructor.insertBefore(ACTION.toString()), CannotCompileException.class);
         return this;
     }
 
-    public ConstructorByteCodeBuilder insertBody() {
-        constructors.forEach(constructor -> Runtime.run(() -> constructor.setBody(ACTION.toString())));
+    public ConstructorByteCodeBuilder insertBody() throws CannotCompileException {
+        constructors.forEach(constructor -> constructor.setBody(ACTION.toString()), CannotCompileException.class);
         return this;
     }
 
-    public ConstructorByteCodeBuilder insertAfter() {
-        constructors.forEach(constructor -> Runtime.run(() -> constructor.insertAfter(ACTION.toString())));
+    public ConstructorByteCodeBuilder insertAfter() throws CannotCompileException {
+        constructors.forEach(constructor -> constructor.insertAfter(ACTION.toString()), CannotCompileException.class);
         return this;
     }
 
     public ConstructorByteCodeBuilder removeModifiers(Integer... modifiers) {
-        HStream<Integer> modifiersStream = HStream.of(modifiers);
-        constructors.forEach(constructor -> modifiersStream.forEach(modifier -> constructor.setModifiers(constructor.getModifiers() & ~modifier)));
+        HList<Integer> modifiersList = HList.of(modifiers);
+        constructors.forEach(constructor -> modifiersList.forEach(modifier -> constructor.setModifiers(constructor.getModifiers() & ~modifier)));
         return this;
     }
 
     public ConstructorByteCodeBuilder addModifiers(Integer... modifiers) {
-        HStream<Integer> modifiersStream = HStream.of(modifiers);
-        constructors.forEach(constructor -> modifiersStream.forEach(modifier -> constructor.setModifiers(constructor.getModifiers() | modifier)));
-        return this;
-    }
-
-    public ConstructorByteCodeBuilder addLocalVariable(String name, String typeClassName) {
-        CtClass type = ByteCodeBuilderFactory.getDefaultClassPoolSettings().getCtClass(typeClassName);
-        constructors.forEach(constructor -> Runtime.run(() -> constructor.addLocalVariable(name, type)));
-        return this;
-    }
-
-    public ConstructorByteCodeBuilder addCatchBlock(String catchCode, String exceptionClassName) {
-        CtClass e = ByteCodeBuilderFactory.getDefaultClassPoolSettings().getCtClass(exceptionClassName);
-        constructors.forEach(constructor -> Runtime.run(() -> constructor.addCatch(catchCode, e)));
-        return this;
-    }
-
-    public ConstructorByteCodeBuilder addParameter(String parameterClassName) {
-        CtClass param = ByteCodeBuilderFactory.getDefaultClassPoolSettings().getCtClass(parameterClassName);
-        constructors.forEach(constructor -> Runtime.run(() -> constructor.addParameter(param)));
+        HList<Integer> modifiersList = HList.of(modifiers);
+        constructors.forEach(constructor -> modifiersList.forEach(modifier -> constructor.setModifiers(constructor.getModifiers() | modifier)));
         return this;
     }
 
@@ -112,7 +94,6 @@ public class ConstructorByteCodeBuilder extends ByteCodeBuilder {
     /*
      * Methods that change the body
      */
-
     public ConstructorByteCodeBuilder addCode(String code) {
         this.ACTION.append(code);
         return this;

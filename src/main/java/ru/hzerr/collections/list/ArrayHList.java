@@ -1,12 +1,9 @@
 package ru.hzerr.collections.list;
 
 import org.jetbrains.annotations.NotNull;
-import ru.hzerr.stream.HStream;
+import ru.hzerr.collections.functions.Functions;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -26,6 +23,230 @@ public final class ArrayHList<E> extends ArrayList<E> implements HList<E> {
         }
 
         return list;
+    }
+
+    @Override
+    public <R, TH extends Exception> HList<R> map(Functions.Func<? super E, ? extends R, TH> mapper, Class<TH> exception) throws TH {
+        HList<R> list = new ArrayHList<>();
+        for (E element : this) {
+            list.add(mapper.apply(element));
+        }
+
+        return list;
+    }
+
+    @Override
+    public <R, TH extends Exception, TH2 extends Exception> HList<R> map(Functions.BiFunc<? super E, ? extends R, TH, TH2> mapper, Class<TH> exception, Class<TH2> exception2) throws TH, TH2 {
+        HList<R> list = new ArrayHList<>();
+        for (E element : this) {
+            list.add(mapper.apply(element));
+        }
+
+        return list;
+    }
+
+    @Override
+    public <R, TH extends Exception, TH2 extends Exception, TH3 extends Exception> HList<R> map(Functions.ThFunc<? super E, ? extends R, TH, TH2, TH3> mapper, Class<TH> exception, Class<TH2> exception2, Class<TH3> exception3) throws TH, TH2, TH3 {
+        HList<R> list = new ArrayHList<>();
+        for (E element : this) {
+            list.add(mapper.apply(element));
+        }
+
+        return list;
+    }
+
+    @Override
+    public boolean allMatch(Predicate<? super E> predicate) {
+        for (E element : this) {
+            if (!predicate.test(element)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public <TH extends Exception> boolean allMatch(Functions.Predicate<? super E, TH> predicate, Class<TH> exception) throws TH {
+        for (E element : this) {
+            if (!predicate.test(element)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public <TH extends Exception, TH2 extends Exception> boolean allMatch(Functions.BiPredicate<? super E, TH, TH2> predicate, Class<TH> exception, Class<TH2> exception2) throws TH, TH2 {
+        for (E element : this) {
+            if (!predicate.test(element)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public <TH extends Exception, TH2 extends Exception, TH3 extends Exception> boolean allMatch(Functions.ThPredicate<? super E, TH, TH2, TH3> predicate, Class<TH> exception, Class<TH2> exception2, Class<TH3> exception3) throws TH, TH2, TH3 {
+        for (E element : this) {
+            if (!predicate.test(element)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public boolean anyMatch(Predicate<? super E> predicate) {
+        for (E element : this) {
+            if (predicate.test(element)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @Override
+    public <TH extends Exception> boolean anyMatch(Functions.Predicate<? super E, TH> predicate, Class<TH> exception) throws TH {
+        for (E element : this) {
+            if (predicate.test(element)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @Override
+    public <TH extends Exception, TH2 extends Exception> boolean anyMatch(Functions.BiPredicate<? super E, TH, TH2> predicate, Class<TH> exception, Class<TH2> exception2) throws TH, TH2 {
+        for (E element : this) {
+            if (predicate.test(element)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @Override
+    public <TH extends Exception, TH2 extends Exception, TH3 extends Exception> boolean anyMatch(Functions.ThPredicate<? super E, TH, TH2, TH3> predicate, Class<TH> exception, Class<TH2> exception2, Class<TH3> exception3) throws TH, TH2, TH3 {
+        for (E element : this) {
+            if (predicate.test(element)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean noneMatch(Predicate<? super E> predicate) {
+        for (E element : this) {
+            if (predicate.test(element)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public <TH extends Exception> boolean noneMatch(Functions.Predicate<? super E, TH> predicate, Class<TH> exception) throws TH {
+        for (E element : this) {
+            if (predicate.test(element)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public <TH extends Exception, TH2 extends Exception> boolean noneMatch(Functions.BiPredicate<? super E, TH, TH2> predicate, Class<TH> exception, Class<TH2> exception2) throws TH, TH2 {
+        for (E element : this) {
+            if (predicate.test(element)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public <TH extends Exception, TH2 extends Exception, TH3 extends Exception> boolean noneMatch(Functions.ThPredicate<? super E, TH, TH2, TH3> predicate, Class<TH> exception, Class<TH2> exception2, Class<TH3> exception3) throws TH, TH2, TH3 {
+        for (E element : this) {
+            if (predicate.test(element)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public <TH extends Exception> void forEach(Functions.Consumer<? super E, TH> action, Class<TH> exception) throws TH {
+        for (E e : this) {
+            action.accept(e);
+        }
+    }
+
+    @Override
+    public <TH extends Exception, TH2 extends Exception>
+    void forEach(Functions.BiConsumer<? super E, TH, TH2> action, Class<TH> exception, Class<TH2> exception2) throws TH, TH2 {
+        for (E e : this) {
+            action.accept(e);
+        }
+    }
+
+    @Override
+    public <TH extends Exception, TH2 extends Exception, TH3 extends Exception>
+    void forEach(Functions.ThConsumer<? super E, TH, TH2, TH3> action, Class<TH> exception, Class<TH2> exception2, Class<TH3> exception3) throws TH, TH2, TH3 {
+        for (E e : this) {
+            action.accept(e);
+        }
+    }
+
+    @Override
+    public <TH extends Exception> boolean removeIf(Functions.Predicate<? super E, TH> filter, Class<TH> exception) throws TH {
+        boolean removed = false;
+        final Iterator<E> each = iterator();
+        while (each.hasNext()) {
+            if (filter.test(each.next())) {
+                each.remove();
+                removed = true;
+            }
+        }
+        return removed;
+    }
+
+    @Override
+    public <TH extends Exception, TH2 extends Exception> boolean removeIf(Functions.BiPredicate<? super E, TH, TH2> filter, Class<TH> exception, Class<TH2> exception2) throws TH, TH2 {
+        boolean removed = false;
+        final Iterator<E> each = iterator();
+        while (each.hasNext()) {
+            if (filter.test(each.next())) {
+                each.remove();
+                removed = true;
+            }
+        }
+        return removed;
+    }
+
+    @Override
+    public <TH extends Exception, TH2 extends Exception, TH3 extends Exception> boolean removeIf(Functions.ThPredicate<? super E, TH, TH2, TH3> filter, Class<TH> exception, Class<TH2> exception2, Class<TH3> exception3) throws TH, TH2, TH3 {
+        boolean removed = false;
+        final Iterator<E> each = iterator();
+        while (each.hasNext()) {
+            if (filter.test(each.next())) {
+                each.remove();
+                removed = true;
+            }
+        }
+        return removed;
     }
 
     @Override
@@ -121,10 +342,6 @@ public final class ArrayHList<E> extends ArrayList<E> implements HList<E> {
     public E lastElement() {
         return get(size() - 1);
     }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public HStream<E> toHStream() { return HStream.of((E[]) this.toArray()); }
 
     @Override
     public boolean equals(Object o) {

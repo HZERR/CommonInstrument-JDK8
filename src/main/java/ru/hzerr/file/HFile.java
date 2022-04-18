@@ -2,10 +2,11 @@ package ru.hzerr.file;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import ru.hzerr.collections.list.ArrayHList;
+import ru.hzerr.collections.list.HList;
 import ru.hzerr.file.exception.ParentNotFoundException;
 import ru.hzerr.file.exception.directory.NoSuchHDirectoryException;
 import ru.hzerr.file.exception.file.*;
-import ru.hzerr.stream.HStream;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -13,15 +14,23 @@ import java.math.RoundingMode;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.Objects;
 
 public class HFile extends BaseFile {
+
+    private transient MappedByteBuffer data;
 
     public HFile(String pathname) { super(pathname); }
     public HFile(String parent, String child) { super(parent, child); }
@@ -168,13 +177,42 @@ public class HFile extends BaseFile {
         }
     }
 
-    public HStream<String> readLines(Charset charset) throws HFileReadException {
+    public HList<String> readLines(Charset charset) throws IOException {
         checkExists(this);
         try {
-            return HStream.of(FileUtils.readLines(file, charset));
+            return new ArrayHList<>(FileUtils.readLines(file, charset));
         } catch (IOException io) {
             throw new HFileReadException(io, "The reading of file " + this.getLocation() + " ended with an error");
         }
+    }
+
+    @Override
+    public HList<String> asyncReadLines(Charset charset) throws IOException {
+        try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(file.toPath())) {
+            ByteBuffer bb = ByteBuffer.allocate(8192);
+            channel.read(bb, 0);
+            return ArrayHList.create(new String(bb.array()).split("\n"));
+        }
+//        ForkJoinPool forkJoinPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
+//        FileReaderTask task = new FileReaderTask(file.toPath(), 0, 0);
+//        forkJoinPool.invoke(task);
+//        while (!task.isDone());
+//        return task.getData();
+    }
+
+    @Override
+    public void refreshDataInMemory() throws IOException {
+        try (FileChannel fileChannel = (FileChannel) Files.newByteChannel(file.toPath(), EnumSet.of(StandardOpenOption.READ))) {
+            data = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size());
+        }
+    }
+
+    @Override
+    public HList<String> readFromMemory(Charset charset) throws ByteBufferNotInitializationException {
+            if (data != null) {
+                return HList.of(charset.decode(data).toString().split(System.lineSeparator())); //stringutils.split check
+            } else
+                throw new ByteBufferNotInitializationException("MappedByteBuffer can't be null. Use the refreshDataInMemory() method first");
     }
 
     @Override
@@ -268,6 +306,13 @@ public class HFile extends BaseFile {
     }
 
     public static HFile from(File file) { return new HFile(file.getPath()); }
+
+//    public String asyncReadLines0(long pos) throws IOException {
+//        try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(file.toPath())) {
+//            ByteBuffer buffer = null;
+//            channel.read(buffer, pos);
+//        }
+//    }
 
     private boolean isHierarchicalChild0(BaseDirectory superParent) {
         File parent = file.getAbsoluteFile().getParentFile();
