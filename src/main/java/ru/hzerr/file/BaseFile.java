@@ -65,7 +65,8 @@ public abstract class BaseFile implements IFSObject {
     public abstract HList<String> readLines(Charset charset) throws IOException;
     public abstract HList<String> asyncReadLines(Charset charset) throws IOException;
     public abstract void refreshDataInMemory() throws IOException;
-    public abstract HList<String> readFromMemory(Charset charset) throws ByteBufferNotInitializationException;
+    public abstract HList<String> readFromMemory(Charset charset);
+    public abstract void cleanDataInMemory();
 
     /**
      * Writes the <code>toString()</code> value of each item in a collection to

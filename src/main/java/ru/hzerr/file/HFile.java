@@ -7,6 +7,7 @@ import ru.hzerr.collections.list.HList;
 import ru.hzerr.file.exception.ParentNotFoundException;
 import ru.hzerr.file.exception.directory.NoSuchHDirectoryException;
 import ru.hzerr.file.exception.file.*;
+import sun.nio.ch.DirectBuffer;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -188,6 +189,7 @@ public class HFile extends BaseFile {
 
     @Override
     public HList<String> asyncReadLines(Charset charset) throws IOException {
+        checkExists(this);
         try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(file.toPath())) {
             ByteBuffer bb = ByteBuffer.allocate(8192);
             channel.read(bb, 0);
@@ -202,17 +204,28 @@ public class HFile extends BaseFile {
 
     @Override
     public void refreshDataInMemory() throws IOException {
+        checkExists(this);
         try (FileChannel fileChannel = (FileChannel) Files.newByteChannel(file.toPath(), EnumSet.of(StandardOpenOption.READ))) {
             data = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size());
         }
     }
 
     @Override
-    public HList<String> readFromMemory(Charset charset) throws ByteBufferNotInitializationException {
-            if (data != null) {
-                return HList.of(charset.decode(data).toString().split(System.lineSeparator())); //stringutils.split check
-            } else
-                throw new ByteBufferNotInitializationException("MappedByteBuffer can't be null. Use the refreshDataInMemory() method first");
+    public HList<String> readFromMemory(Charset charset) {
+        if (data != null) {
+            return HList.of(charset.decode(data).toString().split(System.lineSeparator())); //stringutils.split check
+        } else
+            throw new ByteBufferNotInitializationException("MappedByteBuffer can't be null. Use the refreshDataInMemory() method first");
+    }
+
+    @Override
+    public void cleanDataInMemory() {
+        if (data != null) {
+            data.clear();
+            ((DirectBuffer) data).cleaner().clean();
+            data = null;
+        } else
+            throw new ByteBufferNotInitializationException("MappedByteBuffer can't be null. Use the refreshDataInMemory() method first");
     }
 
     @Override
