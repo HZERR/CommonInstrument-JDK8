@@ -4,10 +4,8 @@ import org.jetbrains.annotations.NotNull;
 import ru.hzerr.collections.functions.Functions;
 
 import java.util.*;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.UnaryOperator;
+import java.util.function.*;
+import java.util.stream.Collectors;
 
 public final class ArrayHList<E> extends ArrayList<E> implements HList<E> {
 
@@ -331,6 +329,13 @@ public final class ArrayHList<E> extends ArrayList<E> implements HList<E> {
     public final void setAll(E... elements) {
         clear();
         addAll(elements);
+    }
+
+    @Override
+    public <C extends Collection<E>> C to(Supplier<C> collectionFactory) {
+        C collection = collectionFactory.get();
+        collection.addAll(this);
+        return collection;
     }
 
     @Override

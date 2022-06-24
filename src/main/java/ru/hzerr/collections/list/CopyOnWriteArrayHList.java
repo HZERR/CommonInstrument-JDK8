@@ -9,10 +9,7 @@ import java.util.Iterator;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.UnaryOperator;
+import java.util.function.*;
 
 /**
  * @version 1.5.3
@@ -116,6 +113,13 @@ public final class CopyOnWriteArrayHList<E> extends CopyOnWriteArrayList<E> impl
         } finally {
             lock.unlock();
         }
+    }
+
+    @Override
+    public <C extends Collection<E>> C to(Supplier<C> collectionFactory) {
+        C collection = collectionFactory.get();
+        collection.addAll(this);
+        return collection;
     }
 
     @Override

@@ -2,6 +2,7 @@ package ru.hzerr.collections.list;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Supplier;
 
 public interface HList<E> extends List<E>,
         Finder<E>,
@@ -25,6 +26,8 @@ public interface HList<E> extends List<E>,
      */
     @SuppressWarnings("unchecked")
     void setAll(E... elements);
+
+    <C extends Collection<E>> C to(Supplier<C> collectionFactory);
 
     /**
      * Returns the first element of the collection or throws an IndexOutOfBoundsException

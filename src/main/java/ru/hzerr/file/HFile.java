@@ -7,9 +7,10 @@ import ru.hzerr.collections.list.HList;
 import ru.hzerr.file.exception.ParentNotFoundException;
 import ru.hzerr.file.exception.directory.NoSuchHDirectoryException;
 import ru.hzerr.file.exception.file.*;
-import sun.nio.ch.DirectBuffer;
+import sun.misc.Unsafe;
 
 import java.io.*;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.MalformedURLException;
@@ -222,7 +223,11 @@ public class HFile extends BaseFile {
     public void cleanDataInMemory() {
         if (data != null) {
             data.clear();
-            ((DirectBuffer) data).cleaner().clean();
+            try {
+                Field f = Unsafe.class.getDeclaredField("theUnsafe");
+                f.setAccessible(true);
+                Unsafe.class.getMethod("invokeCleaner", ByteBuffer.class).invoke(f.get(null), data);
+            } catch (Throwable ignored) {}
             data = null;
         } else
             throw new ByteBufferNotInitializationException("MappedByteBuffer can't be null. Use the refreshDataInMemory() method first");
