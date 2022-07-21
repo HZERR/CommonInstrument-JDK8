@@ -7,10 +7,12 @@ import ru.hzerr.collections.list.HList;
 import ru.hzerr.file.exception.ParentNotFoundException;
 import ru.hzerr.file.exception.directory.NoSuchHDirectoryException;
 import ru.hzerr.file.exception.file.*;
+import ru.hzerr.util.SystemInfo;
 import sun.misc.Unsafe;
 
 import java.io.*;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.MalformedURLException;
@@ -223,7 +225,18 @@ public class HFile extends BaseFile {
     public void cleanDataInMemory() {
         if (data != null) {
             data.clear();
-            try {
+            if (SystemInfo.isJava8()) {
+                try {
+                    Class<?> directByteBuffer = Class.forName("sun.nio.ch.DirectBuffer");
+                    Object o = cast(directByteBuffer, data);
+                    Method getCleanerMethod = o.getClass().getDeclaredMethod("cleaner");
+                    getCleanerMethod.setAccessible(true);
+                    Object cleaner = getCleanerMethod.invoke(o);
+                    Method clean = cleaner.getClass().getMethod("clean");
+                    clean.setAccessible(true);
+                    clean.invoke(cleaner);
+                } catch (Exception ignored) { }
+            } else try {
                 Field f = Unsafe.class.getDeclaredField("theUnsafe");
                 f.setAccessible(true);
                 Unsafe.class.getMethod("invokeCleaner", ByteBuffer.class).invoke(f.get(null), data);
@@ -341,6 +354,11 @@ public class HFile extends BaseFile {
         }
 
         return false;
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T cast(Class<T> c1, Object o) {
+        return (T) o;
     }
 
     private void checkExists(IFSObject... objects) {

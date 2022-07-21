@@ -18,6 +18,10 @@ public class MethodByteCodeBuilder extends ByteCodeBuilder {
     private HList<CtMethod> methods;
     private final StringBuilder ACTION = new StringBuilder();
 
+    public HList<CtMethod> getMethods() {
+        return methods;
+    }
+
     public static MethodByteCodeBuilder init(CtMethod... methods) {
         MethodByteCodeBuilder builder = new MethodByteCodeBuilder();
         builder.methods = HList.of(methods);
