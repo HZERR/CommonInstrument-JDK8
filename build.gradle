@@ -6,10 +6,9 @@ buildscript {
 
 
     dependencies {
-        classpath "org.apache.commons:commons-lang3:3.12.0"
-        //noinspection GradlePackageUpdate
-        classpath "commons-io:commons-io:2.11.0"
-        classpath "org.javassist:javassist:3.29.0-GA"
+        classpath 'org.apache.commons:commons-lang3:3.12.0'
+        classpath 'commons-io:commons-io:2.11.0'
+        classpath 'org.javassist:javassist:3.29.0-GA'
     }
 }
 
@@ -27,15 +26,15 @@ repositories {
 }
 
 dependencies {
-    implementation "org.apache.commons:commons-lang3:3.12.0"
+    implementation 'org.apache.commons:commons-lang3:3.12.0'
     implementation 'org.jetbrains:annotations:23.0.0'
-    implementation "commons-io:commons-io:2.11.0"
+    implementation 'commons-io:commons-io:2.11.0'
     implementation 'org.javassist:javassist:3.29.0-GA'
 }
 
 shadowJar {
     archiveBaseName.set('common-instrument')
-    archiveVersion.set('1.8.4')
-    archiveClassifier.set('17-all')
+    archiveVersion.set('1.8.4.2')
+    archiveClassifier.set('8-all')
     getDestinationDirectory().set(new File("${projectDir}/build"))
 }
