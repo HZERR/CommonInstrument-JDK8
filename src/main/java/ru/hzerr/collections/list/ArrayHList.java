@@ -354,7 +354,7 @@ public final class ArrayHList<E> extends ArrayList<E> implements HList<E> {
         if (o instanceof HList) {
             //noinspection unchecked
             HList<E> target = (HList<E>) o;
-            return this.containsAll(target) && target.containsAll(this);
+            return new HashSet<>(this).containsAll(target) && new HashSet<>(target).containsAll(this);
         }
 
         return false;

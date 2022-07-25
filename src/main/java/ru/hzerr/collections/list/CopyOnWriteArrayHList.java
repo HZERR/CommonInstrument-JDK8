@@ -3,10 +3,7 @@ package ru.hzerr.collections.list;
 import org.jetbrains.annotations.NotNull;
 import ru.hzerr.collections.functions.Functions;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.*;
@@ -423,7 +420,7 @@ public final class CopyOnWriteArrayHList<E> extends CopyOnWriteArrayList<E> impl
         if (o instanceof HList) {
             //noinspection unchecked
             HList<E> target = (HList<E>) o;
-            return this.containsAll(target) && target.containsAll(this);
+            return new HashSet<>(this).containsAll(target) && new HashSet<>(target).containsAll(this);
         }
 
         return false;
