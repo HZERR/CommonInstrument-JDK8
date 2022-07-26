@@ -23,6 +23,7 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -247,14 +248,51 @@ public class HFile extends BaseFile {
     }
 
     @Override
-    public void writeLines(String... lines) throws IOException { writeLines(Arrays.asList(lines)); }
+    public void write(String line) throws HFileWriteException {
+        write(line, StandardCharsets.UTF_8);
+    }
 
-    public void writeLines(Collection<String> lines) throws HFileWriteException { writeLines(lines, false); }
+    @Override
+    public void write(String line, Charset charset) throws HFileWriteException {
+        write(line, charset, false);
+    }
 
-    public void writeLines(Collection<String> lines, boolean append) throws HFileWriteException {
+    @Override
+    public void write(String line, Charset charset, boolean append) throws HFileWriteException {
         checkExists(this);
         try {
-            FileUtils.writeLines(file, lines, append);
+            FileUtils.write(file, line, charset, append);
+        } catch (IOException io) {
+            throw new HFileWriteException(io, "Writing to file " + this.getLocation() + " ended with an error");
+        }
+    }
+
+    @Override
+    public void writeLines(String... lines) throws HFileWriteException { writeLines(Arrays.asList(lines)); }
+
+    @Override
+    public void writeLines(Collection<String> lines) throws HFileWriteException { writeLines(lines, false); }
+
+    @Override
+    public void writeLines(Collection<String> lines, boolean append) throws HFileWriteException {
+        writeLines(lines, StandardCharsets.UTF_8, append);
+    }
+
+    @Override
+    public void writeLines(Collection<String> lines, Charset charset, boolean append) throws HFileWriteException {
+        checkExists(this);
+        try {
+            FileUtils.writeLines(file, charset.name(), lines, append);
+        } catch (IOException io) {
+            throw new HFileWriteException(io, "Writing to file " + this.getLocation() + " ended with an error");
+        }
+    }
+
+    @Override
+    public void clear() throws HFileWriteException {
+        checkExists(this);
+        try {
+            new PrintWriter(file).close();
         } catch (IOException io) {
             throw new HFileWriteException(io, "Writing to file " + this.getLocation() + " ended with an error");
         }

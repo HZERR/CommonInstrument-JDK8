@@ -68,6 +68,10 @@ public abstract class BaseFile implements IFSObject {
     public abstract HList<String> readFromMemory(Charset charset);
     public abstract void cleanDataInMemory();
 
+    public abstract void write(String line, Charset charset, boolean append) throws IOException;
+    public abstract void write(String line, Charset charset) throws IOException;
+    public abstract void write(String line) throws IOException;
+    public abstract void writeLines(Collection<String> lines, Charset charset, boolean append) throws IOException;
     /**
      * Writes the <code>toString()</code> value of each item in a collection to
      * the specified <code>File</code> line by line.
@@ -82,6 +86,7 @@ public abstract class BaseFile implements IFSObject {
     public abstract void writeLines(Collection<String> lines, boolean append) throws IOException;
     public abstract void writeLines(Collection<String> lines) throws IOException;
     public abstract void writeLines(String... lines) throws IOException;
+    public abstract void clear() throws IOException;
     public abstract long checksum() throws IOException;
     public abstract InputStream openInputStream() throws IOException;
     public abstract OutputStream openOutputStream() throws IOException;
