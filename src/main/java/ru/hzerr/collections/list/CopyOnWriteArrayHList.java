@@ -13,7 +13,7 @@ import java.util.function.*;
  * @param <E> the type of elements held in this collection
  */
 @SuppressWarnings("unchecked")
-public final class CopyOnWriteArrayHList<E> extends CopyOnWriteArrayList<E> implements HList<E> {
+public class CopyOnWriteArrayHList<E> extends CopyOnWriteArrayList<E> implements HList<E> {
 
     final transient ReentrantLock lock = new ReentrantLock();
 

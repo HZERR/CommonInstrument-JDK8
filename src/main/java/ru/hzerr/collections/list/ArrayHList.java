@@ -5,9 +5,8 @@ import ru.hzerr.collections.functions.Functions;
 
 import java.util.*;
 import java.util.function.*;
-import java.util.stream.Collectors;
 
-public final class ArrayHList<E> extends ArrayList<E> implements HList<E> {
+public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
 
     public ArrayHList() { super(); }
     public ArrayHList(int initialCapacity) { super(initialCapacity); }

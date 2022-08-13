@@ -30,11 +30,15 @@ dependencies {
     implementation 'org.jetbrains:annotations:23.0.0'
     implementation 'commons-io:commons-io:2.11.0'
     implementation 'org.javassist:javassist:3.29.0-GA'
+//    // https://mvnrepository.com/artifact/com.github.oshi/oshi-core
+//    implementation group: 'com.github.oshi', name: 'oshi-core', version: '6.2.2'
+//    // https://mvnrepository.com/artifact/com.github.oshi/oshi-demo
+//    implementation group: 'com.github.oshi', name: 'oshi-demo', version: '6.2.2'
 }
 
 shadowJar {
     archiveBaseName.set('common-instrument')
-    archiveVersion.set('1.8.8')
+    archiveVersion.set('1.8.8.2')
     archiveClassifier.set('8-all')
     getDestinationDirectory().set(new File("${projectDir}/build"))
 }
