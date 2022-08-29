@@ -316,6 +316,24 @@ public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
 
     @Override
     @SafeVarargs
+    public final boolean containsAll(E... elements) {
+        for (E e : elements)
+            if (noContains(e))
+                return false;
+        return true;
+    }
+
+    @Override
+    @SafeVarargs
+    public final boolean noContainsAll(E... elements) {
+        for (E e : elements)
+            if (contains(e))
+                return false;
+        return true;
+    }
+
+    @Override
+    @SafeVarargs
     @SuppressWarnings("ManualArrayToCollectionCopy")
     public final void addAll(E... elements) {
         for (E element : elements) {

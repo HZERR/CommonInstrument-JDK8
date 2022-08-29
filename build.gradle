@@ -8,7 +8,7 @@ buildscript {
     dependencies {
         classpath 'org.apache.commons:commons-lang3:3.12.0'
         classpath 'commons-io:commons-io:2.11.0'
-        classpath 'org.javassist:javassist:3.29.0-GA'
+        classpath 'org.javassist:javassist:3.29.1-GA'
     }
 }
 
@@ -29,7 +29,7 @@ dependencies {
     implementation 'org.apache.commons:commons-lang3:3.12.0'
     implementation 'org.jetbrains:annotations:23.0.0'
     implementation 'commons-io:commons-io:2.11.0'
-    implementation 'org.javassist:javassist:3.29.0-GA'
+    implementation 'org.javassist:javassist:3.29.1-GA'
 //    // https://mvnrepository.com/artifact/com.github.oshi/oshi-core
 //    implementation group: 'com.github.oshi', name: 'oshi-core', version: '6.2.2'
 //    // https://mvnrepository.com/artifact/com.github.oshi/oshi-demo

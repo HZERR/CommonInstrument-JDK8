@@ -26,4 +26,6 @@ public interface Contender<E> {
      * @return true if and only if all tests over the elements return true
      */
     boolean contains(Predicate<? super E> action);
+    boolean containsAll(E... elements);
+    boolean noContainsAll(E... elements);
 }

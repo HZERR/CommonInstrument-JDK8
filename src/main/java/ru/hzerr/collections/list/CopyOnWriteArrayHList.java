@@ -58,6 +58,24 @@ public class CopyOnWriteArrayHList<E> extends CopyOnWriteArrayList<E> implements
     }
 
     @Override
+    @SafeVarargs
+    public final boolean containsAll(E... elements) {
+        for (E e : elements)
+            if (noContains(e))
+                return false;
+        return true;
+    }
+
+    @Override
+    @SafeVarargs
+    public final boolean noContainsAll(E... elements) {
+        for (E e : elements)
+            if (contains(e))
+                return false;
+        return true;
+    }
+
+    @Override
     public Optional<E> find(Predicate<? super E> predicate) {
         for (E element: this) {
             if (predicate.test(element)) return Optional.of(element);
