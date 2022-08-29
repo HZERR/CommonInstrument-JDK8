@@ -325,9 +325,27 @@ public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
 
     @Override
     @SafeVarargs
+    public final boolean containsAll(Predicate<? super E>... actions) {
+        for (Predicate<? super E> action : actions)
+            if (noContains(action))
+                return false;
+        return true;
+    }
+
+    @Override
+    @SafeVarargs
     public final boolean noContainsAll(E... elements) {
         for (E e : elements)
             if (contains(e))
+                return false;
+        return true;
+    }
+
+    @Override
+    @SafeVarargs
+    public final boolean noContainsAll(Predicate<? super E>... actions) {
+        for (Predicate<? super E> action : actions)
+            if (contains(action))
                 return false;
         return true;
     }

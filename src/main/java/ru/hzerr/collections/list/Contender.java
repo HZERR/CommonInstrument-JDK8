@@ -27,5 +27,7 @@ public interface Contender<E> {
      */
     boolean contains(Predicate<? super E> action);
     boolean containsAll(E... elements);
+    boolean containsAll(Predicate<? super E>... actions);
     boolean noContainsAll(E... elements);
+    boolean noContainsAll(Predicate<? super E>... actions);
 }
