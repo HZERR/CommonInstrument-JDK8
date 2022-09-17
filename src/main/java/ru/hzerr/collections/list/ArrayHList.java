@@ -1,16 +1,24 @@
 package ru.hzerr.collections.list;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Range;
 import ru.hzerr.collections.functions.Functions;
 
 import java.util.*;
 import java.util.function.*;
+import java.util.function.IntFunction;
 
 public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
 
     public ArrayHList() { super(); }
-    public ArrayHList(int initialCapacity) { super(initialCapacity); }
+    public ArrayHList(@Range(from = 0, to = Integer.MAX_VALUE) int initialCapacity) { super(initialCapacity); }
     public ArrayHList(Collection<? extends E> collection) { super(collection); }
+
+    private ArrayHList(HList<? extends E> collection, int from, int to) {
+        for (int i = from; i < to; i++) {
+            add(collection.get(i));
+        }
+    }
 
     @Override
     public <R> HList<R> map(Function<? super E, ? extends R> mapper) {
@@ -381,6 +389,34 @@ public class ArrayHList<E> extends ArrayList<E> implements HList<E> {
     @Override
     public E lastElement() {
         return get(size() - 1);
+    }
+
+    @Override
+    public HList<E> subList(Predicate<E> condition) {
+        HList<E> list = new ArrayHList<>();
+        for (E element : this) {
+            if (condition.test(element)) {
+                list.add(element);
+            }
+        }
+
+        return list;
+    }
+
+    @Override
+    public HList<E> subList(int fromIndex, int toIndex) {
+        return new ArrayHList<>(this, fromIndex, toIndex);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public E[] toArray() {
+        return (E[]) super.toArray();
+    }
+
+    @Override
+    public <T> T[] toArray(IntFunction<T[]> generator) {
+        return toArray(generator.apply(0));
     }
 
     @Override

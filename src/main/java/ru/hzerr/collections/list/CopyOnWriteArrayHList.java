@@ -7,6 +7,7 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.*;
+import java.util.function.IntFunction;
 
 /**
  * @version 1.5.3
@@ -20,6 +21,12 @@ public class CopyOnWriteArrayHList<E> extends CopyOnWriteArrayList<E> implements
     public CopyOnWriteArrayHList() { super(); }
     public CopyOnWriteArrayHList(E[] toCopyIn) { super(toCopyIn); }
     public CopyOnWriteArrayHList(Collection<? extends E> collection) { super(collection); }
+
+    private CopyOnWriteArrayHList(HList<? extends E> collection, int from, int to) {
+        for (int i = from; i < to; i++) {
+            add(collection.get(i));
+        }
+    }
 
     @Override
     public void changeIf(Predicate<? super E> condition, Consumer<? super E> changer) {
@@ -163,6 +170,29 @@ public class CopyOnWriteArrayHList<E> extends CopyOnWriteArrayList<E> implements
     @Override
     public E lastElement() {
         return get(size() - 1);
+    }
+
+    @Override
+    public HList<E> subList(Predicate<E> condition) {
+        HList<E> list = new CopyOnWriteArrayHList<>();
+        for (E element : this) {
+            if (condition.test(element)) {
+                list.add(element);
+            }
+        }
+
+        return list;
+    }
+
+    @Override
+    public HList<E> subList(int fromIndex, int toIndex) {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            return new CopyOnWriteArrayHList<>(this, fromIndex, toIndex);
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
@@ -448,6 +478,16 @@ public class CopyOnWriteArrayHList<E> extends CopyOnWriteArrayList<E> implements
         for (E e : this) {
             action.accept(e);
         }
+    }
+
+    @Override
+    public E[] toArray() {
+        return (E[]) super.toArray();
+    }
+
+    @Override
+    public <T> T[] toArray(IntFunction<T[]> generator) {
+        return toArray(generator.apply(0));
     }
 
     @Override

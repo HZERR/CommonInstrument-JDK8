@@ -25,7 +25,6 @@ import java.nio.file.*;
 import java.nio.file.attribute.FileAttribute;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
