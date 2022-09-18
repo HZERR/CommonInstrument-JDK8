@@ -10,7 +10,6 @@ import ru.hzerr.file.annotation.Recursive;
 import ru.hzerr.file.exception.ParentNotFoundException;
 import ru.hzerr.file.exception.directory.*;
 import ru.hzerr.file.exception.file.HFileCreateImpossibleException;
-import ru.hzerr.file.exception.file.HFileCreationFailedException;
 import ru.hzerr.file.exception.file.HFileIsNotFileException;
 import ru.hzerr.file.exception.file.NoSuchHFileException;
 
@@ -39,15 +38,9 @@ public class HDirectory extends BaseDirectory {
     protected HDirectory(Path path) { super(path.toString()); }
 
     @Override
-    public void create() throws HDirectoryIsNotDirectoryException, HDirectoryCreateImpossibleException {
-        if (directory.exists()) {
-            if (directory.isFile()) {
-                throw new HDirectoryIsNotDirectoryException("File " + directory + " exists and is not a directory. Unable to create directory.");
-            }
-        } else if (!directory.mkdirs()) {
-            // Double-check that some other thread or process hasn't made
-            // the directory in the background
-            if (directory.isFile()) {
+    public void create() throws HDirectoryCreateImpossibleException {
+        if (!directory.exists()) {
+            if (!directory.mkdirs()) {
                 throw new HDirectoryCreateImpossibleException("Unable to create directory " + directory);
             }
         }
@@ -67,7 +60,7 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
-    public BaseFile createSubFile(String fileName) throws HFileIsNotFileException, HFileCreationFailedException, HFileCreateImpossibleException {
+    public BaseFile createSubFile(String fileName) throws HFileIsNotFileException, HFileCreateImpossibleException {
         checkExists(this);
         HFile subFile = new HFile(this, fileName);
         subFile.create();

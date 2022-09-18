@@ -72,21 +72,21 @@ public class HFile extends BaseFile {
     boolean notEqualsBaseName(T file) { return !equalsBaseName(file); }
 
     @Override
-    public void create() throws HFileIsNotFileException, HFileCreationFailedException, HFileCreateImpossibleException {
+    public void create() throws HFileIsNotFileException, HFileCreateImpossibleException {
         if (file.exists()) {
             if (file.isDirectory()) {
-                throw new HFileIsNotFileException("File " + file + " exists and is not a file. Unable to create file.");
+                throw new HFileIsNotFileException("File " + file + " exists and is not a file. Unable to create file");
             }
         } else {
             boolean created;
             try {
                 created = file.createNewFile();
-            } catch (IOException io) { throw new HFileCreationFailedException(io.getMessage()); }
+            } catch (IOException io) { throw new HFileCreateImpossibleException(io.getMessage()); }
             if (!created) {
                 // Double-check that some other thread or process hasn't made
                 // the file in the background
                 if (file.isDirectory()) {
-                    throw new HFileCreateImpossibleException("Unable to create file " + file);
+                    throw new HFileIsNotFileException("File " + file + " exists and is not a file. Unable to create file");
                 }
             }
         }
