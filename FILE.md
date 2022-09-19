@@ -33,6 +33,8 @@ public class Main {
         downloads.getName(); // return Downloads
         BaseDirectory xxx = new HDirectory("C:\\Windows\\xxx");
         // xxx.create(); // throws HDirectoryCreateImpossibleException
+        // Удаляет директорию, если она существует
+        xxx.deleteIfPresent(); // return false
         music.exists(); // return true
         music.notExists(); // return false
         music.create(); // NO THROWS. Если директория существует, метод create ничего не делает
