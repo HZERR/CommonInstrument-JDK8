@@ -34,7 +34,7 @@ public class HDirectory extends BaseDirectory {
     public HDirectory(URI uri) { super(uri); }
     public HDirectory(String pathname) { super(pathname); }
     public HDirectory(String parent, String child) { super(parent, child); }
-    public HDirectory(HDirectory parent, String child) { super(parent, child); }
+    public HDirectory(BaseDirectory parent, String child) { super(parent, child); }
     protected HDirectory(Path path) { super(path.toString()); }
 
     @Override
@@ -321,8 +321,7 @@ public class HDirectory extends BaseDirectory {
         checkExists(this);
         boolean hasFile = false;
         try (DirectoryStream<Path> paths = Files.newDirectoryStream(directory.toPath())) {
-            while (paths.iterator().hasNext()) {
-                Path path = paths.iterator().next();
+            for (Path path : paths) {
                 if (isNotDirectory(path)) {
                     hasFile = true;
                 } else
@@ -339,8 +338,7 @@ public class HDirectory extends BaseDirectory {
         checkExists(this);
         boolean hasDirectory = false;
         try (DirectoryStream<Path> paths = Files.newDirectoryStream(directory.toPath())) {
-            while (paths.iterator().hasNext()) {
-                Path path = paths.iterator().next();
+            for (Path path : paths) {
                 if (Files.isDirectory(path)) {
                     hasDirectory = true;
                 } else
@@ -538,8 +536,8 @@ public class HDirectory extends BaseDirectory {
     public boolean notExists() { return !this.directory.exists(); }
     @Override
     public HDirectory getParent() throws ParentNotFoundException {
-        if (directory.getAbsoluteFile().getParent() != null) {
-            return new HDirectory(directory.getAbsoluteFile().getParent());
+        if (directory.toPath().getParent() != null) {
+            return new HDirectory(directory.toPath().getParent());
         } else
             throw new ParentNotFoundException("The " + directory.getAbsolutePath() + " directory does not have a parent");
     }
@@ -841,11 +839,11 @@ public class HDirectory extends BaseDirectory {
 
     private boolean isHierarchicalChild0(BaseDirectory superParent) {
         if (this.directory.equals(superParent.directory)) return true;
-        File supDirectory = directory.getAbsoluteFile().getParentFile();
+        Path supDirectory = directory.toPath();
         while (supDirectory != null) {
-            if (supDirectory.equals(superParent.directory)) {
+            if (supDirectory.equals(superParent.directory.toPath())) {
                 return true;
-            } else supDirectory = directory.getAbsoluteFile().getParentFile();
+            } else supDirectory = supDirectory.getParent();
         }
 
         return false;

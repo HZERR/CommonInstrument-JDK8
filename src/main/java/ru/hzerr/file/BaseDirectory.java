@@ -9,6 +9,7 @@ import ru.hzerr.file.annotation.Recursive;
 import ru.hzerr.file.exception.ValidationException;
 import ru.hzerr.file.exception.directory.HDirectoryRenameFailedException;
 import ru.hzerr.file.exception.directory.HDirectoryRenameImpossibleException;
+import ru.hzerr.util.JsonToStringStyle;
 
 import java.io.File;
 import java.io.IOException;
@@ -65,7 +66,7 @@ public abstract class BaseDirectory implements IFSObject {
     @MaybeRecursive public abstract <T extends BaseFile> HList<BaseFile> getFilesExcept(boolean recursive, T... filesToBeExcluded) throws IOException;
     @NotRecursive public abstract <T extends BaseDirectory> HList<BaseDirectory> getDirectoriesExcept(T... filesToBeExcluded) throws IOException;
     @NotRecursive public abstract <T extends BaseDirectory> HList<BaseDirectory> getDirectoriesExcept(String... filesToBeExcluded) throws IOException;
-    @MaybeRecursive public abstract <T extends BaseDirectory> HList<BaseDirectory> getDirectoriesExcept(boolean recursive, T... fileNamesToBeExcluded) throws IOException;
+    @MaybeRecursive public abstract <T extends BaseDirectory> HList<BaseDirectory> getDirectoriesExcept(boolean recursive, T... directoriesToBeExcluded) throws IOException;
 
     /**
      * Returns a list of all files in the current directory, except those that should be excluded
@@ -97,8 +98,7 @@ public abstract class BaseDirectory implements IFSObject {
     @Recursive public abstract HList<BaseFile> findFiles(String glob) throws IOException;
 
     /**
-     * Example of incoming method arguments: "java", "config", "persons".
-     * Do not use names with file extensions
+     * Example of incoming method arguments: "java.exe", "config.ini".
      */
     @Recursive public abstract HList<BaseFile> findFilesByNames(String... names) throws IOException;
 
@@ -134,7 +134,7 @@ public abstract class BaseDirectory implements IFSObject {
 
     @Override
     public String toString() {
-        return new ToStringBuilder(this, ToStringStyle.JSON_STYLE)
+        return new ToStringBuilder(this, new JsonToStringStyle())
                 .append("directory", directory)
                 .toString();
     }
