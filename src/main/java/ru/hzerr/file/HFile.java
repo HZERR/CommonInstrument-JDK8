@@ -20,12 +20,12 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
 import java.util.Arrays;
@@ -100,6 +100,16 @@ public class HFile extends BaseFile {
     }
 
     @Override
+    public boolean deleteIfPresent() throws IOException {
+        if (file.exists()) {
+            FileUtils.forceDelete(file);
+            return notExists();
+        }
+
+        return false;
+    }
+
+    @Override
     public void deleteOnExit() { this.file.deleteOnExit(); }
 
     @Override
@@ -107,7 +117,7 @@ public class HFile extends BaseFile {
         checkExists(this);
         final Path src = this.asPath();
         try {
-            Files.move(src, src.resolveSibling(fileName));
+            file = Files.move(src, src.resolveSibling(fileName), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE).toFile();
         } catch (IOException io) {
             throw new HFileRenameFailedException(io, "File " + this.getLocation() + " has not been renamed");
         }
@@ -115,7 +125,7 @@ public class HFile extends BaseFile {
 
     @Override
     public void rename(String name, String extension) throws HFileRenameFailedException {
-        this.rename(name + extension);
+        this.rename(name + '.' + extension);
     }
 
     @Override
@@ -135,8 +145,9 @@ public class HFile extends BaseFile {
     @Override
     public <T extends BaseFile>
     void moveToFile(T file) throws IOException {
-        checkExists(file, this);
+        checkExists(this);
         FileUtils.moveFile(this.file, file.file);
+        this.file = file.file;
     }
 
     @Override
@@ -144,6 +155,7 @@ public class HFile extends BaseFile {
     void moveToDirectory(T directory) throws IOException {
         checkExists(directory, this);
         FileUtils.moveFileToDirectory(file, directory.directory, false);
+        this.file = new File(directory.directory, file.getName());
     }
 
     @Override
@@ -192,21 +204,6 @@ public class HFile extends BaseFile {
     }
 
     @Override
-    public HList<String> asyncReadLines(Charset charset) throws IOException {
-        checkExists(this);
-        try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(file.toPath())) {
-            ByteBuffer bb = ByteBuffer.allocate(8192);
-            channel.read(bb, 0);
-            return ArrayHList.create(charset.decode(bb).toString().split("\n"));
-        }
-//        ForkJoinPool forkJoinPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
-//        FileReaderTask task = new FileReaderTask(file.toPath(), 0, 0);
-//        forkJoinPool.invoke(task);
-//        while (!task.isDone());
-//        return task.getData();
-    }
-
-    @Override
     public void refreshDataInMemory() throws IOException {
         checkExists(this);
         try (FileChannel fileChannel = (FileChannel) Files.newByteChannel(file.toPath(), EnumSet.of(StandardOpenOption.READ))) {
@@ -243,6 +240,7 @@ public class HFile extends BaseFile {
                 Unsafe.class.getMethod("invokeCleaner", ByteBuffer.class).invoke(f.get(null), data);
             } catch (Throwable ignored) {}
             data = null;
+            Runtime.getRuntime().gc();
         } else
             throw new ByteBufferNotInitializationException("MappedByteBuffer can't be null. Use the refreshDataInMemory() method first");
     }
@@ -305,7 +303,7 @@ public class HFile extends BaseFile {
         } catch (IOException io) { throw new HFileReadException(io, "The checksum can't be received"); }
     }
 
-    public InputStream openInputStream() throws HFileNotFoundException, HFileReadException {
+    public FileInputStream openInputStream() throws HFileNotFoundException, HFileReadException {
         try {
             return FileUtils.openInputStream(file);
         } catch (FileNotFoundException fnf) {
@@ -315,11 +313,11 @@ public class HFile extends BaseFile {
         }
     }
 
-    public OutputStream openOutputStream() throws IOException {
+    public FileOutputStream openOutputStream() throws IOException {
         return openOutputStream(false);
     }
 
-    public OutputStream openOutputStream(boolean append) throws IOException {
+    public FileOutputStream openOutputStream(boolean append) throws IOException {
         checkExists(this);
         return FileUtils.openOutputStream(file, append);
     }

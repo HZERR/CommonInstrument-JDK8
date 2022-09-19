@@ -4,14 +4,13 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import ru.hzerr.collections.list.HList;
 import ru.hzerr.file.exception.ValidationException;
-import ru.hzerr.file.exception.file.ByteBufferNotInitializationException;
 import ru.hzerr.file.exception.file.HFileRenameFailedException;
 import ru.hzerr.file.exception.file.HFileWriteException;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.file.CopyOption;
@@ -63,7 +62,6 @@ public abstract class BaseFile implements IFSObject {
     public abstract <T extends BaseDirectory> void moveToDirectory(T directory) throws IOException;
     public abstract byte[] readToByteArray() throws IOException;
     public abstract HList<String> readLines(Charset charset) throws IOException;
-    public abstract HList<String> asyncReadLines(Charset charset) throws IOException;
     public abstract void refreshDataInMemory() throws IOException;
     public abstract HList<String> readFromMemory(Charset charset);
     public abstract void cleanDataInMemory();
@@ -88,9 +86,9 @@ public abstract class BaseFile implements IFSObject {
     public abstract void writeLines(String... lines) throws IOException;
     public abstract void clear() throws IOException;
     public abstract long checksum() throws IOException;
-    public abstract InputStream openInputStream() throws IOException;
-    public abstract OutputStream openOutputStream() throws IOException;
-    public abstract OutputStream openOutputStream(boolean append) throws IOException;
+    public abstract FileInputStream openInputStream() throws IOException;
+    public abstract FileOutputStream openOutputStream() throws IOException;
+    public abstract FileOutputStream openOutputStream(boolean append) throws IOException;
 
     // END METHODS
 

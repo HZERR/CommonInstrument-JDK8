@@ -24,6 +24,7 @@ import java.nio.file.*;
 import java.nio.file.attribute.FileAttribute;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -75,8 +76,8 @@ public class HDirectory extends BaseDirectory {
 
     @Override
     public void rename(String fullName) throws HDirectoryRenameFailedException, HDirectoryRenameImpossibleException {
-        if (directory.getAbsoluteFile().getParent() != null) {
-            File dir = new File(Paths.get(directory.getAbsoluteFile().getParent()).resolve(fullName).normalize().toString());
+        if (directory.toPath().getParent() != null) {
+            File dir = new File(directory.toPath().getParent().resolve(fullName).normalize().toString());
             try {
                 FileUtils.copyDirectory(directory, dir);
                 delete();
@@ -661,6 +662,16 @@ public class HDirectory extends BaseDirectory {
     }
 
     @Override
+    public boolean deleteIfPresent() throws IOException {
+        if (directory.exists()) {
+            FileUtils.forceDelete(directory);
+            return notExists();
+        }
+
+        return false;
+    }
+
+    @Override
     public void deleteOnExit() { this.directory.deleteOnExit(); }
 
     @Override
@@ -688,10 +699,11 @@ public class HDirectory extends BaseDirectory {
     public <T extends BaseDirectory> void moveToDirectory(T directory) throws IOException {
         checkExists(this, directory);
         FileUtils.moveDirectoryToDirectory(this.directory, directory.directory, false);
+        this.directory = new File(directory.directory, this.directory.getName());
     }
 
-    public <T extends BaseDirectory> void moveContentToDirectory(T directory) throws IOException {
-        moveContentToDirectory(directory, false);
+    public Optional<BaseDirectory> moveContentToDirectory(BaseDirectory directory) throws IOException {
+        return moveContentToDirectory(directory, false);
     }
 
     @Override
@@ -781,13 +793,19 @@ public class HDirectory extends BaseDirectory {
         }
     }
 
-    public <T extends BaseDirectory> void moveContentToDirectory(T directory, boolean shouldDeleteDirToBeMoved) throws IOException {
+    public Optional<BaseDirectory> moveContentToDirectory(BaseDirectory directory, boolean shouldDeleteDirToBeMoved) throws IOException {
         checkExists(this, directory);
         FileUtils.copyDirectory(this.directory, directory.directory);
         if (shouldDeleteDirToBeMoved) {
             delete();
-        } else
+            this.directory = directory.directory;
+            return Optional.empty();
+        } else {
+            Optional<BaseDirectory> result = Optional.of(new HDirectory(this.directory.toPath()));
             clean();
+            this.directory = directory.directory;
+            return result;
+        }
     }
 
     public double sizeOf(SizeType type) {

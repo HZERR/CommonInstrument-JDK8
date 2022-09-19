@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Paths;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 @SuppressWarnings({"unused", "unchecked"})
@@ -119,7 +120,10 @@ public abstract class BaseDirectory implements IFSObject {
     public abstract <T extends BaseDirectory>
     void moveToDirectory(T directory) throws IOException;
     public abstract <T extends BaseDirectory>
-    void moveContentToDirectory(T directory) throws IOException;
+    Optional<T> moveContentToDirectory(T directory) throws IOException;
+
+    public abstract <T extends BaseDirectory>
+    Optional<T> moveContentToDirectory(T directory, boolean delete) throws IOException;
 
     @NotRecursive public abstract boolean checkCountFiles(Long count) throws IOException;
     @NotRecursive public abstract boolean checkCountOnlyFiles(Long count) throws IOException;
