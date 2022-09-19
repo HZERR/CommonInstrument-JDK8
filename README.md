@@ -13,3 +13,12 @@ CommonInstrument for JDK 8
 * HFile
 * HCollections
 * HByteCodeBuilder
+
+## Путеводитель
+
+[Пакет - "ru.hzerr.bytecode". Работа с байт-кодом](#)</br>
+[Пакет - "ru.hzerr.file". Работа с файлами](FILE.md)</br>
+[Пакет - "ru.hzerr.collection". Работа с коллекциями](#)</br>
+[Пакет - "ru.hzerr.util". Дополнительные вспомогательные классы](#)</br>
+
+$${\color{red}Используйте\ библиотеку\ на\ свой\ страх\ и\ риск}$$
