@@ -129,10 +129,13 @@ public class Main {
         electronic.copyToDirectory(downloads);
         // Копирует содержимое в другой каталог (возможно долгая операция, поправим)
         electronic.copyContentToDirectory(downloads);
-        // Перемещает "себя" в другой каталог (возможно долгая операция, поправим)
+        // Перемещает "себя" в другой каталог. 
+        // Внутренне изменяет состояние. electronic будет иметь уже другой location
         electronic.moveToDirectory(downloads);
-        // Перемещает содержимое в другой каталог (возможно долгая операция, поправим)
-        electronic.moveContentToDirectory(downloads);
+        // Перемещает содержимое в другой каталог. 
+        // Внутренне изменяет состояние. electronic будет иметь уже другой location, который равен передаваемой директории
+        // Если указано, что нужно удалить старую директорию, возвращается Optional.empty(), иначе Optional со старым BaseDirectory
+        Optional<BaseDirectory> oldDirectory = electronic.moveContentToDirectory(downloads, false);
         // Не рекурсивно сверяет количество файлов/директорий
         electronic.checkCountFiles(1L); // false
         // Не рекурсивно сверяет количество файлов
