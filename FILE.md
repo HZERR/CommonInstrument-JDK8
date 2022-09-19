@@ -155,3 +155,101 @@ public class Main {
     }
 }
 ```
+
+### Обзор работы с классом HFile
+
+```java
+import ru.hzerr.collections.list.HList;
+import ru.hzerr.file.BaseDirectory;
+import ru.hzerr.file.BaseFile;
+import ru.hzerr.file.HDirectory;
+import ru.hzerr.file.HFile;
+import ru.hzerr.util.SystemInfo;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
+public class Main {
+    public static void main(String... args) throws IOException {
+        BaseDirectory downloads = new HDirectory(SystemInfo.getUserHome(), "Downloads");
+        BaseFile yandexBrowser;
+        yandexBrowser = new HFile(downloads.getLocation().concat(File.separator).concat("yandexXXX.exe"));
+        yandexBrowser = new HFile(downloads.getLocation(), "yandexXXX.exe");
+        yandexBrowser = new HFile(downloads, "yandexXXX.exe");
+        yandexBrowser = new HFile(yandexBrowser.asURI());
+        yandexBrowser.create();
+        yandexBrowser.getExtension(); // return exe
+        yandexBrowser.getBaseName(); // return yandexXXX
+        yandexBrowser.getName(); // return yandexXXX.exe
+        BaseFile torBrowser = new HFile(downloads, "tor.exe");
+        torBrowser.create();
+        yandexBrowser.equalsExtension(torBrowser); // return true
+        yandexBrowser.notEqualsExtension(torBrowser); // return false
+        yandexBrowser.equalsBaseName(torBrowser); // return false
+        yandexBrowser.notEqualsBaseName(torBrowser); // return true
+        // Записывает в файл строку. Перед записью уничтожает все содержимое файла
+        // Кодировка записи по-умолчанию UTF-8
+        yandexBrowser.write("Яндекс");
+        // Записывает в файл строку в кодировке UTF-8. Перед записью уничтожает все содержимое файла
+        yandexBrowser.write("Яндекс", StandardCharsets.UTF_8);
+        // Уничтожает/не уничтожает содержимое и добавляет в начало/конец файла строку в кодировке UTF-8
+        yandexBrowser.write(" Браузер", StandardCharsets.UTF_8, true);
+        torBrowser.rename("yandex64XXX", "exe");
+        // Оба файла обязательно должны существовать
+        yandexBrowser.copyToFile(torBrowser); // Аналогично и для yandexBrowser.copyToDirectory(new HDirectory(SystemInfo.getUserHome()));
+        torBrowser.readLines(StandardCharsets.UTF_8).forEach(System.out::println); // print Яндекс Браузер
+        // Записывает в файл строки. Перед записью уничтожает все содержимое файла
+        // Кодировка записи по-умолчанию UTF-8
+        torBrowser.writeLines("1 line", "2 line", "3 line");
+        torBrowser.writeLines(HList.of("1 line", "2 line", "3 line"));
+        torBrowser.writeLines(HList.of("4 line", "5 line"), true);
+        torBrowser.writeLines(HList.of("6 line"), StandardCharsets.UTF_8, true);
+        torBrowser.readLines(StandardCharsets.UTF_8).forEach(System.out::println);
+        /*
+         * Output:
+         * 1 line
+         * 2 line
+         * 3 line
+         * 4 line
+         * 5 line
+         * 6 line
+         */
+        // Читает содержимое файла в массив
+        torBrowser.readToByteArray(); // return byte[] array
+        // Чтение файла из памяти
+        // torBrowser.readFromMemory(StandardCharsets.UTF_8); // throws ByteBufferNotInitializationException
+        torBrowser.refreshDataInMemory();
+        // АСИНХРОННО НЕ ЧИТАТЬ. Используйте библиотеку RxIO
+        torBrowser.readFromMemory(StandardCharsets.UTF_8).lastElement(); // return 6 line
+        // Силами 7 богов пытается очистить буфер
+        torBrowser.cleanDataInMemory();
+        // Возвращает контрольную сумму файла, используя процедуру контрольной суммы CRC32
+        torBrowser.checksum();
+        // Открывает FileInputStream
+        try (FileInputStream fis = torBrowser.openInputStream()) {
+        }
+        // Открывает FileOutputStream
+        try (FileOutputStream fis = torBrowser.openOutputStream(true)) {
+        }
+        // Очищает файл
+        torBrowser.clear();
+        torBrowser.getLocation(); // return C:\Users\HZERR\Downloads\yandex64XXX.exe
+        // Удалим dst файл, если таковой существует
+        new HDirectory(SystemInfo.getUserHome()).getSubFile(torBrowser.getName()).deleteIfPresent();
+        // Перемещаем файл yandex64XXX.exe в другую директорию. При перемещении состояние HDirectory также меняется
+        torBrowser.moveToDirectory(new HDirectory(SystemInfo.getUserHome()));
+        torBrowser.getLocation(); // return C:\Users\HZERR\yandex64XXX.exe
+        torBrowser.write("TOR Browser");
+        // Удалим dst файл, если таковой существует
+        yandexBrowser.deleteIfPresent();
+        torBrowser.moveToFile(yandexBrowser);
+        torBrowser.getLocation(); // return C:\Users\HZERR\Downloads\yandexXXX.exe
+        torBrowser.equals(yandexBrowser); // return true
+        torBrowser.readLines(StandardCharsets.UTF_8).forEach(System.out::println); // TOR Browser
+        // Остальные методы описаны в коде работы с HDirectory
+    }
+}
+```
