@@ -8,6 +8,8 @@ CommonInstrument for JDK 8
 ![GitHub last commit](https://img.shields.io/github/last-commit/HZERR/CommonInstrument-JDK8?style=flat)
 ![GitHub Release Date](https://img.shields.io/github/release-date/HZERR/CommonInstrument-JDK8)
 
+## This library is deprecated. Use [CommonInstruments-JDK17](https://github.com/HZERR/CommonInstruments-JDK17)
+
 ## Includes
 
 * HFile
@@ -16,7 +18,7 @@ CommonInstrument for JDK 8
 
 ## Путеводитель
 
-[Пакет - "ru.hzerr.bytecode". Работа с байт-кодом](#)</br>
+[Пакет - "ru.hzerr.bytecode". Работа с байт-кодом](#)</br> 
 [Пакет - "ru.hzerr.file". Работа с файлами](FILE.md)</br>
 [Пакет - "ru.hzerr.collection". Работа с коллекциями](#)</br>
 [Пакет - "ru.hzerr.util". Дополнительные вспомогательные классы](UTIL.md)</br>
